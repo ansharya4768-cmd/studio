@@ -1,0 +1,14 @@
+diff --git a/node_modules/@emurgo/cardano-serialization-lib-asmjs/cardano_serialization_lib_bg.js b/node_modules/@emurgo/cardano-serialization-lib-asmjs/cardano_serialization_lib_bg.js
+index 7291079..729795e 100644
+--- a/node_modules/@emurgo/cardano-serialization-lib-asmjs/cardano_serialization_lib_bg.js
++++ b/node_modules/@emurgo/cardano-serialization-lib-asmjs/cardano_serialization_lib_bg.js
+@@ -28594,7 +28594,8 @@ export function __wbindgen_string_new(arg0, arg1) {
+ };
+ 
+ export function __wbg_require_0993fe224bf8e202(arg0, arg1) {
+-    const ret = require(getStringFromWasm0(arg0, arg1));
++    // const ret = require(getStringFromWasm0(arg0, arg1));
++    const ret = {};
+     return addHeapObject(ret);
+ };
+ 
