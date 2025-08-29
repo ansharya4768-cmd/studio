@@ -6,8 +6,19 @@ import * as bitcoin from 'bitcoinjs-lib';
 import BIP32Factory from 'bip32';
 import * as ecc from '@bitcoinerlab/secp256k1';
 import { Keypair } from '@solana/web3.js';
-import * as CSL from '@emurgo/cardano-serialization-lib-asmjs';
 import bs58 from 'bs58';
+
+// Dynamically import the Cardano serialization library only on the client side
+let CSL: typeof import('@emurgo/cardano-serialization-lib-asmjs') | null = null;
+const loadCSL = async () => {
+    if (CSL) return CSL;
+    if (typeof window !== 'undefined') {
+        CSL = await import('@emurgo/cardano-serialization-lib-asmjs');
+        return CSL;
+    }
+    return null;
+};
+
 
 bitcoin.initEccLib(ecc);
 const bip32 = BIP32Factory(ecc);
@@ -68,11 +79,17 @@ async function deriveSolWallet(mnemonic: string): Promise<WalletInfo> {
 }
 
 async function deriveCardanoWallet(mnemonic: string): Promise<WalletInfo> {
-    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const CSL = await loadCSL();
+    if (!CSL) {
+        throw new Error('Cardano Serialization Library could not be loaded.');
+    }
+
+    const entropy = bip39.mnemonicToEntropy(mnemonic);
     const rootKey = CSL.Bip32PrivateKey.from_bip39_entropy(
-        Buffer.from(mnemonic.split(' ').map(word => bip39.wordlists.english.indexOf(word).toString(16).padStart(2, '0')).join(''), 'hex'),
+        Buffer.from(entropy, 'hex'),
         Buffer.from('')
     );
+    
     const accountKey = rootKey
         .derive(CSL.harden(1852))
         .derive(CSL.harden(1815))
