@@ -26,10 +26,7 @@ const nextConfig: NextConfig = {
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-        config.externals = {
-            ...config.externals,
-            '@emurgo/cardano-serialization-lib-asmjs': 'commonjs @emurgo/cardano-serialization-lib-asmjs',
-        };
+        config.externals.push('@emurgo/cardano-serialization-lib-asmjs');
     }
     return config;
   },

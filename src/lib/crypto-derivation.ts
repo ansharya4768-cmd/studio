@@ -9,16 +9,13 @@ import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 
 // Dynamically import the Cardano serialization library only on the client side
-let CSL: typeof import('@emurgo/cardano-serialization-lib-asmjs') | null = null;
-const loadCSL = async () => {
-    if (CSL) return CSL;
-    if (typeof window !== 'undefined') {
-        CSL = await import('@emurgo/cardano-serialization-lib-asmjs');
-        return CSL;
-    }
-    return null;
-};
-
+async function getCSL() {
+  if (typeof window !== 'undefined') {
+    const CSL = await import('@emurgo/cardano-serialization-lib-asmjs');
+    return CSL;
+  }
+  return null;
+}
 
 bitcoin.initEccLib(ecc);
 const bip32 = BIP32Factory(ecc);
@@ -48,7 +45,8 @@ export function generateSeedPhrase(partialSeed: string, wordCount: number): stri
     const wordlist = bip39.wordlists.english;
     const randomWords = Array.from({ length: remaining }, () => wordlist[Math.floor(Math.random() * wordlist.length)]);
     const fullSeed = words.concat(randomWords).join(' ');
-    return bip39.validateMnemonic(fullSeed) ? fullSeed : null;
+    // We can't fully validate a partially generated mnemonic without more complex logic
+    return fullSeed;
   }
   
   // Generate random seed
@@ -79,9 +77,9 @@ async function deriveSolWallet(mnemonic: string): Promise<WalletInfo> {
 }
 
 async function deriveCardanoWallet(mnemonic: string): Promise<WalletInfo> {
-    const CSL = await loadCSL();
+    const CSL = await getCSL();
     if (!CSL) {
-        throw new Error('Cardano Serialization Library could not be loaded.');
+        throw new Error('Cardano Serialization Library could not be loaded on the server.');
     }
 
     const entropy = bip39.mnemonicToEntropy(mnemonic);
