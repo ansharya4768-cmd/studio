@@ -24,6 +24,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // Exclude wasm from server-side bundling
+    config.externals = {
+      ...config.externals,
+      '@emurgo/cardano-serialization-lib-asmjs': 'commonjs @emurgo/cardano-serialization-lib-asmjs',
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
