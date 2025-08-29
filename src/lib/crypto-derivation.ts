@@ -89,8 +89,8 @@ async function deriveCardanoWallet(mnemonic: string): Promise<WalletInfo> {
     );
     
     const accountKey = rootKey
-        .derive(CSL.harden(1852))
-        .derive(CSL.harden(1815))
+        .derive(CSL.harden(1852)) // Shelley era
+        .derive(CSL.harden(1815)) // Cardano
         .derive(CSL.harden(0));
     
     const utxoPubKey = accountKey.derive(0).derive(0).to_public();
