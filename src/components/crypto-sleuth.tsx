@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 import { checkBalancesAndGetInsights } from '@/app/actions';
 import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
@@ -93,16 +94,15 @@ export default function CryptoSleuth() {
         
         const hasBalance = Object.values(balances).some(bal => parseFloat(bal) > 0);
 
+        // Always update the result to show the latest attempt
+        setResult({ seedPhrase, wallets, balances, explanation, summary });
+
         if (hasBalance) {
-          setResult({ seedPhrase, wallets, balances, explanation, summary });
           toast({
             title: 'Wallet Found!',
             description: `A wallet with a balance was found after ${currentAttempts} attempts.`,
           });
           stopSearching();
-        } else if (currentAttempts % 5 === 0) {
-            // Update UI periodically to show progress without overwhelming the state
-            setResult({ seedPhrase, wallets, balances, explanation, summary });
         }
       } catch (error) {
         console.error(error);
