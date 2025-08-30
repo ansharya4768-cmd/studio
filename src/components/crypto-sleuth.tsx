@@ -142,7 +142,8 @@ export default function CryptoSleuth() {
             
             const fullBalances = await checkAllBalances(wallets);
 
-            setResult(prev => prev ? ({ ...prev, balances: fullBalances }) : null);
+            const finalResult = { seedPhrase, wallets, balances: fullBalances, explanation: '', summary: '' };
+            setResult(finalResult);
             setIsCheckingAll(false);
             setIsLoading(false);
 
@@ -153,8 +154,24 @@ export default function CryptoSleuth() {
 
             setIsGettingInsights(true);
             const { explanation, summary } = await getInsights(wallets, fullBalances);
-            setResult(prev => prev ? ({ ...prev, explanation, summary }) : null);
+            const finalResultWithInsights = { ...finalResult, explanation, summary };
+            setResult(finalResultWithInsights);
             setIsGettingInsights(false);
+            
+            try {
+              await encryptAndSave(finalResultWithInsights);
+              toast({
+                title: 'Saved Successfully',
+                description: 'Your wallet data has been securely saved in your browser.',
+              });
+            } catch (error) {
+              console.error(error);
+              toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not automatically save wallet data.',
+              });
+            }
           }
         } catch (error) {
           // Log errors but don't stop the worker
@@ -184,24 +201,6 @@ export default function CryptoSleuth() {
       searchRef.current = false;
     };
   }, []);
-  
-  const handleSave = async () => {
-    if (!result) return;
-    try {
-      await encryptAndSave(result);
-      toast({
-        title: 'Saved Successfully',
-        description: 'Your wallet data has been securely saved in your browser.',
-      });
-    } catch (error) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: 'Could not save wallet data.',
-      });
-    }
-  };
   
   const hasAnyBalance = result && Object.values(result.balances).some(bal => bal !== '...' && parseFloat(bal) > 0);
 
@@ -353,14 +352,6 @@ export default function CryptoSleuth() {
                 <WalletCard key={index} {...wallet} />
               ))}
             </div>
-
-            {hasAnyBalance && (
-              <div className="flex justify-center">
-                <Button onClick={handleSave} size="lg" className="shadow-lg">
-                  <Save className="mr-2 h-4 w-4" /> Securely Save Found Wallet
-                </Button>
-              </div>
-            )}
             
             {(result.explanation || result.summary || isGettingInsights) && (
               <Accordion type="single" collapsible className="w-full bg-white/20 p-4 rounded-lg border" defaultValue="explanation">
