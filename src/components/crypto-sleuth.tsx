@@ -5,7 +5,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Save, Search, Sparkles, X } from 'lucide-react';
+import { Loader2, Pause, Play, Save, Search, Sparkles, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
 import { AdaIcon, BscIcon, BtcIcon, EthIcon, LtcIcon, SolIcon } from './icons';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 const blockchains: { id: Blockchain; label: string; icon: React.ReactNode }[] = [
     { id: 'ethereum', label: 'Ethereum (ETH)', icon: <EthIcon className="h-5 w-5" /> },
@@ -31,7 +32,7 @@ const blockchains: { id: Blockchain; label: string; icon: React.ReactNode }[] = 
     { id: 'bsc', label: 'BSC (BNB)', icon: <BscIcon className="h-5 w-5" /> },
     { id: 'cardano', label: 'Cardano (ADA)', icon: <AdaIcon className="h-5 w-5" /> },
     { id: 'litecoin', label: 'Litecoin (LTC)', icon: <LtcIcon className="h-5 w-5" /> },
-  ];
+];
 
 const formSchema = z.object({
   partialSeed: z.string().optional(),
@@ -52,19 +53,38 @@ type ResultState = {
 } | null;
 
 const CONCURRENCY_LEVEL = 5; // Number of parallel checks
+const ATTEMPTS_COUNTER_KEY = 'lost-wallet-finder-attempts';
+const LAST_RESET_KEY = 'lost-wallet-finder-last-reset';
 
 export default function CryptoSleuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ResultState>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [isGettingInsights, setIsGettingInsights] = useState(false);
   const [isCheckingAll, setIsCheckingAll] = useState(false);
-  const [attempts, setAttempts] = useState(0);
+  
+  const [persistedAttempts, setPersistedAttempts] = useLocalStorage(ATTEMPTS_COUNTER_KEY, 0);
+  const [lastReset, setLastReset] = useLocalStorage(LAST_RESET_KEY, Date.now());
+  const [attempts, setAttempts] = useState(persistedAttempts);
+
   const { toast } = useToast();
   
   const searchRef = useRef<boolean>(false);
-  const attemptsRef = useRef<number>(0);
+  const pauseRef = useRef<boolean>(false);
+  const attemptsRef = useRef<number>(persistedAttempts);
   const foundRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    if (now - lastReset > oneDay) {
+        setPersistedAttempts(0);
+        setAttempts(0);
+        attemptsRef.current = 0;
+        setLastReset(now);
+    }
+  }, [lastReset, setLastReset, setPersistedAttempts]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -79,29 +99,49 @@ export default function CryptoSleuth() {
 
   const stopSearching = useCallback(() => {
     searchRef.current = false;
+    pauseRef.current = false;
     foundRef.current = false;
     setIsSearching(false);
+    setIsPaused(false);
   }, []);
+
+  const pauseSearching = () => {
+    pauseRef.current = true;
+    setIsPaused(true);
+  };
+
+  const continueSearching = () => {
+    pauseRef.current = false;
+    setIsPaused(false);
+  };
 
   const runSearch = useCallback(async (data: FormData) => {
     searchRef.current = true;
+    pauseRef.current = false;
     foundRef.current = false;
     setIsSearching(true);
+    setIsPaused(false);
     setIsLoading(true);
     setResult(null);
-    attemptsRef.current = 0;
-    setAttempts(0);
+
+    if (attemptsRef.current === 0) {
+      setAttempts(0); // Reset UI counter if starting fresh
+    }
 
     const searchBlockchains = data.blockchains as Blockchain[];
 
     const worker = async () => {
       while (searchRef.current && !foundRef.current) {
+        if (pauseRef.current) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            continue;
+        }
+
         attemptsRef.current++;
         
         try {
           const seedPhrase = generateSeedPhrase(data.partialSeed || '', parseInt(data.wordCount, 10));
           if (!seedPhrase) {
-            // This case is unlikely unless there's an issue with wordlist/generation logic
             continue; 
           }
 
@@ -126,13 +166,12 @@ export default function CryptoSleuth() {
               if (chain === 'litecoin') allBalances.ltcBalance = quickBalances.litecoin;
           });
           
-          // Only update the main view if we haven't found a wallet yet
           if (!foundRef.current) {
             setResult({ seedPhrase, wallets, balances: allBalances, explanation: '', summary: '' });
           }
 
           if (hasBalance) {
-            foundRef.current = true; // Signal other workers to stop
+            foundRef.current = true;
             stopSearching();
             setIsCheckingAll(true);
             toast({
@@ -174,16 +213,16 @@ export default function CryptoSleuth() {
             }
           }
         } catch (error) {
-          // Log errors but don't stop the worker
           console.error("Search worker error:", error);
         }
       }
     };
     
-    // UI update loop for attempts
     const updateCounter = () => {
         if (searchRef.current) {
-            setAttempts(attemptsRef.current);
+            const currentAttempts = attemptsRef.current;
+            setAttempts(currentAttempts);
+            setPersistedAttempts(currentAttempts);
             requestAnimationFrame(updateCounter);
         }
     };
@@ -193,10 +232,9 @@ export default function CryptoSleuth() {
     await Promise.all(workers);
 
     setIsLoading(false);
-  }, [toast, stopSearching]);
+  }, [toast, stopSearching, searchRef, pauseRef, foundRef, attemptsRef, setPersistedAttempts, selectedChains]);
 
   useEffect(() => {
-    // Cleanup ref on unmount
     return () => {
       searchRef.current = false;
     };
@@ -309,7 +347,7 @@ export default function CryptoSleuth() {
                 )}
               />
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
               {!isSearching && (
                 <Button type="submit" className="w-full md:w-auto shadow-lg bg-gradient-to-br from-primary to-accent/80 hover:from-primary/90 hover:to-accent/70 text-white" disabled={!form.formState.isValid} size="lg">
                   <Search className="mr-2 h-4 w-4" />
@@ -317,25 +355,38 @@ export default function CryptoSleuth() {
                 </Button>
               )}
               {isSearching && (
-                <Button variant="destructive" type="button" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
-                  <X className="mr-2 h-4 w-4" />
-                  Stop Searching
-                </Button>
+                <div className="flex gap-4">
+                    {!isPaused ? (
+                        <Button variant="secondary" type="button" className="w-full md:w-auto shadow-lg" onClick={pauseSearching} size="lg">
+                            <Pause className="mr-2 h-4 w-4" />
+                            Pause
+                        </Button>
+                    ) : (
+                        <Button variant="secondary" type="button" className="w-full md:w-auto shadow-lg" onClick={continueSearching} size="lg">
+                            <Play className="mr-2 h-4 w-4" />
+                            Continue
+                        </Button>
+                    )}
+                    <Button variant="destructive" type="button" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
+                        <X className="mr-2 h-4 w-4" />
+                        Stop
+                    </Button>
+                </div>
               )}
+              {isSearching && (
+                <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Wallets Searched Today: {new Intl.NumberFormat().format(attempts)}
+                </div>
+            )}
             </div>
           </form>
         </Form>
         
-        {(isSearching || result) && <Separator className="my-8" />}
+        {result && <Separator className="my-8" />}
 
         {result && (
           <div className="space-y-8">
-             {isSearching && !foundRef.current && (
-                <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Wallet searched= {new Intl.NumberFormat().format(attempts)}
-                </div>
-            )}
             <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-100/50 border-green-500" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
@@ -381,3 +432,5 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
+
+    
