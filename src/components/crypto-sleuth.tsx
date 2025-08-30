@@ -5,7 +5,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Save, Search, X } from 'lucide-react';
+import { Loader2, Save, Search, Sparkles, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -203,10 +203,10 @@ export default function CryptoSleuth() {
     : (isSearching ? Array(selectedChains.length).fill({ loading: true }) : []);
 
   return (
-    <Card className="w-full shadow-lg">
+    <Card className="w-full shadow-2xl bg-white/30 backdrop-blur-xl border border-primary/20">
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(runSearch)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(runSearch)} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               <div className="md:col-span-2 space-y-6">
                 <FormField
@@ -214,9 +214,9 @@ export default function CryptoSleuth() {
                   name="partialSeed"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Partial Seed Phrase (Optional)</FormLabel>
+                      <FormLabel className="text-foreground/80">Partial Seed Phrase (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., apple banana ..." {...field} disabled={isSearching} />
+                        <Input placeholder="e.g., apple banana ..." {...field} disabled={isSearching} className="bg-white/50"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -227,10 +227,10 @@ export default function CryptoSleuth() {
                     name="wordCount"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Word Count</FormLabel>
+                        <FormLabel className="text-foreground/80">Word Count</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSearching}>
                         <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-white/50">
                             <SelectValue placeholder="Select word count" />
                             </SelectTrigger>
                         </FormControl>
@@ -249,9 +249,9 @@ export default function CryptoSleuth() {
                 control={form.control}
                 name="blockchains"
                 render={() => (
-                  <FormItem>
+                  <FormItem className="p-4 border rounded-lg bg-white/20">
                     <div className="mb-4">
-                        <FormLabel>Blockchains to Search</FormLabel>
+                        <FormLabel className="text-foreground/80">Blockchains to Search</FormLabel>
                     </div>
                     <div className="space-y-3">
                     {blockchains.map((item) => (
@@ -280,7 +280,7 @@ export default function CryptoSleuth() {
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal flex items-center gap-2">
+                              <FormLabel className="font-normal flex items-center gap-2 cursor-pointer">
                                 {item.icon} {item.label}
                               </FormLabel>
                             </FormItem>
@@ -296,13 +296,13 @@ export default function CryptoSleuth() {
             </div>
             <div className="flex gap-4">
               {!isSearching && (
-                <Button type="submit" className="w-full md:w-auto" disabled={!form.formState.isValid}>
+                <Button type="submit" className="w-full md:w-auto shadow-lg bg-gradient-to-br from-primary to-accent/80 hover:from-primary/90 hover:to-accent/70 text-white" disabled={!form.formState.isValid} size="lg">
                   <Search className="mr-2 h-4 w-4" />
                   Start Searching
                 </Button>
               )}
               {isSearching && (
-                <Button variant="destructive" className="w-full md:w-auto" onClick={stopSearching}>
+                <Button variant="destructive" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
                   <X className="mr-2 h-4 w-4" />
                   Stop Searching
                 </Button>
@@ -316,26 +316,26 @@ export default function CryptoSleuth() {
         {isSearching && !result && (
           <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Searching... (Attempt: {attempts})
+            Searching... (Attempt: {new Intl.NumberFormat().format(attempts)})
           </div>
         )}
 
         {result && (
-          <div className="space-y-6">
+          <div className="space-y-8">
              {isSearching && (
                 <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Searching... (Attempt: {attempts})
+                    Searching... (Attempt: {new Intl.NumberFormat().format(attempts)})
                 </div>
             )}
-            <Card className={cn("transition-colors", hasAnyBalance ? "bg-green-100/50 border-green-500/50" : "bg-primary/5 border-primary/20")}>
+            <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-100/50 border-green-500" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
                   {isSearching ? 'Last Checked Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-mono text-center text-lg p-4 bg-background rounded-md">{result.seedPhrase}</p>
+                <p className="font-mono text-center text-lg p-4 bg-background/50 rounded-md">{result.seedPhrase}</p>
               </CardContent>
             </Card>
 
@@ -347,24 +347,28 @@ export default function CryptoSleuth() {
 
             {hasAnyBalance && (
               <div className="flex justify-center">
-                <Button onClick={handleSave} size="lg">
+                <Button onClick={handleSave} size="lg" className="shadow-lg">
                   <Save className="mr-2 h-4 w-4" /> Securely Save Found Wallet
                 </Button>
               </div>
             )}
             
             {(result.explanation || result.summary || isGettingInsights) && (
-              <Accordion type="single" collapsible className="w-full" defaultValue="explanation">
-                <AccordionItem value="explanation">
-                  <AccordionTrigger className='font-headline text-lg'>AI Wallet Explanation</AccordionTrigger>
-                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
+              <Accordion type="single" collapsible className="w-full bg-white/20 p-4 rounded-lg border" defaultValue="explanation">
+                <AccordionItem value="explanation" className="border-b-primary/20">
+                  <AccordionTrigger className='font-headline text-lg hover:no-underline'>
+                    <Sparkles className="mr-2 h-5 w-5 text-primary"/> AI Wallet Explanation
+                  </AccordionTrigger>
+                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap pt-4">
                     {isGettingInsights && !result.explanation && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Generating...</div>}
                     {result.explanation}
                   </AccordionContent>
                 </AccordionItem>
-                <AccordionItem value="summary">
-                  <AccordionTrigger className='font-headline text-lg'>AI Investment Insights</AccordionTrigger>
-                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
+                <AccordionItem value="summary" className="border-b-0">
+                  <AccordionTrigger className='font-headline text-lg hover:no-underline'>
+                    <Sparkles className="mr-2 h-5 w-5 text-primary"/> AI Investment Insights
+                  </AccordionTrigger>
+                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap pt-4">
                     {isGettingInsights && !result.summary && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Generating...</div>}
                     {result.summary}
                   </AccordionContent>

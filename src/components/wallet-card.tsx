@@ -36,7 +36,7 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
 
   if (loading || !address) {
     return (
-      <Card>
+      <Card className="bg-white/30 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
            <Skeleton className="h-6 w-24" />
            <Skeleton className="h-8 w-8 rounded-full" />
@@ -50,10 +50,10 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
   }
 
   return (
-    <Card className={cn("flex flex-col transition-colors", hasBalance && "bg-green-100/50 border-green-500/50")}>
+    <Card className={cn("flex flex-col transition-colors border-2 shadow-lg bg-white/30 backdrop-blur-xl", hasBalance ? "border-green-500" : "border-transparent")}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-medium font-headline">{name}</CardTitle>
-        {icon}
+        <div className="p-1 bg-white/50 rounded-full">{icon}</div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-between">
         <div>
@@ -64,8 +64,8 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
           <CardDescription className="text-xs break-all mt-2">{address.address}</CardDescription>
         </div>
         <div className="mt-4">
-          <Separator className="mb-4"/>
-          <Button variant="ghost" size="sm" className="w-full" onClick={handleCopy}>
+          <Separator className="mb-4 bg-primary/10"/>
+          <Button variant="ghost" size="sm" className="w-full text-primary/80 hover:text-primary hover:bg-primary/10" onClick={handleCopy}>
             <Copy className="mr-2 h-4 w-4" />
             Copy Address
           </Button>
