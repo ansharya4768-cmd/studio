@@ -11,6 +11,8 @@ interface Addresses {
   cardano: string;
 }
 
+export type Blockchain = "ethereum" | "bitcoin" | "solana" | "bsc" | "cardano";
+
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "YOUR_ETHERSCAN_API_KEY";
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "YOUR_BSCSCAN_API_KEY";
 const BLOCKCYPHER_API_KEY = process.env.BLOCKCYPHER_API_KEY || "YOUR_BLOCKCYPHER_API_KEY";
@@ -96,12 +98,25 @@ async function checkAdaBalance(address: string): Promise<string> {
   }
 }
 
-export async function quickCheck(addresses: Addresses) {
-  const ethBalance = await checkEthBalance(addresses.ethereum);
-  return { ethBalance };
+const balanceCheckers: Record<Blockchain, (address: string) => Promise<string>> = {
+  ethereum: checkEthBalance,
+  bitcoin: checkBtcBalance,
+  solana: checkSolBalance,
+  bsc: checkBscBalance,
+  cardano: checkAdaBalance,
+};
+
+export async function quickCheck(addresses: Addresses, blockchains: Blockchain[]): Promise<Record<string, string>> {
+    const checks = blockchains.map(async (chain) => {
+        const balance = await balanceCheckers[chain](addresses[chain]);
+        return { [chain]: balance };
+    });
+    const results = await Promise.all(checks);
+    return Object.assign({}, ...results);
 }
 
-export async function checkAllBalances(addresses: Addresses) {
+
+export async function checkAllBalances(addresses: Addresses): Promise<Record<string, string>> {
   const [ethBalance, btcBalance, solBalance, bscBalance, adaBalance] = await Promise.all([
     checkEthBalance(addresses.ethereum),
     checkBtcBalance(addresses.bitcoin),
@@ -123,11 +138,11 @@ export async function getInsights(addresses: Addresses, balances: Record<string,
       bscAddress: addresses.bsc,
     }),
     summarizeBlockchainInsights({
-      ethBalance: balances.ethBalance,
-      btcBalance: balances.btcBalance,
-      solBalance: balances.solBalance,
-      bscBalance: balances.bscBalance,
-      adaBalance: balances.adaBalance,
+      ethBalance: balances.ethBalance || '0',
+      btcBalance: balances.btcBalance || '0',
+      solBalance: balances.solBalance || '0',
+      bscBalance: balances.bscBalance || '0',
+      adaBalance: balances.adaBalance || '0',
     })
   ]);
 

@@ -15,16 +15,28 @@ import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
-import { quickCheck, checkAllBalances, getInsights } from '@/app/actions';
+import { quickCheck, checkAllBalances, getInsights, type Blockchain } from '@/app/actions';
 import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
 import { AdaIcon, BscIcon, BtcIcon, EthIcon, SolIcon } from './icons';
 
+const blockchains: { id: Blockchain; label: string; icon: React.ReactNode }[] = [
+    { id: 'ethereum', label: 'Ethereum (ETH)', icon: <EthIcon className="h-5 w-5" /> },
+    { id: 'bitcoin', label: 'Bitcoin (BTC)', icon: <BtcIcon className="h-5 w-5" /> },
+    { id: 'solana', label: 'Solana (SOL)', icon: <SolIcon className="h-5 w-5" /> },
+    { id: 'bsc', label: 'BSC (BNB)', icon: <BscIcon className="h-5 w-5" /> },
+    { id: 'cardano', label: 'Cardano (ADA)', icon: <AdaIcon className="h-5 w-5" /> },
+  ];
+
 const formSchema = z.object({
   partialSeed: z.string().optional(),
   wordCount: z.enum(['12', '24']),
+  blockchains: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: "You have to select at least one blockchain.",
+  }),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -53,6 +65,7 @@ export default function CryptoSleuth() {
     defaultValues: {
       partialSeed: '',
       wordCount: '12',
+      blockchains: ['ethereum'],
     },
   });
 
@@ -67,6 +80,8 @@ export default function CryptoSleuth() {
     setIsLoading(true);
     setResult(null);
     let currentAttempts = 0;
+
+    const selectedChains = data.blockchains as Blockchain[];
 
     while (searchRef.current) {
       currentAttempts++;
@@ -85,36 +100,40 @@ export default function CryptoSleuth() {
         }
 
         const wallets = await deriveAllWallets(seedPhrase);
-        const { ethBalance } = await quickCheck({
-          ethereum: wallets.ethereum.address,
-          bitcoin: wallets.bitcoin.address,
-          solana: wallets.solana.address,
-          bsc: wallets.bsc.address,
-          cardano: wallets.cardano.address,
+        const quickBalances = await quickCheck(wallets, selectedChains);
+        
+        const hasBalance = Object.values(quickBalances).some(balance => parseFloat(balance) > 0);
+        
+        const allBalances = { 
+          ethBalance: '...', 
+          btcBalance: '...', 
+          solBalance: '...', 
+          bscBalance: '...', 
+          adaBalance: '...' 
+        };
+
+        selectedChains.forEach(chain => {
+            const balanceKey = `${chain.toLowerCase()}Balance` as keyof typeof allBalances;
+            if (chain === 'ethereum') allBalances.ethBalance = quickBalances.ethereum;
+            if (chain === 'bitcoin') allBalances.btcBalance = quickBalances.bitcoin;
+            if (chain === 'solana') allBalances.solBalance = quickBalances.solana;
+            if (chain === 'bsc') allBalances.bscBalance = quickBalances.bsc;
+            if (chain === 'cardano') allBalances.adaBalance = quickBalances.cardano;
         });
-        
-        const hasBalance = parseFloat(ethBalance) > 0;
-        
-        const partialBalances = { ethBalance, btcBalance: '...', solBalance: '...', bscBalance: '...', adaBalance: '...' };
-        setResult({ seedPhrase, wallets, balances: partialBalances, explanation: '', summary: '' });
+
+        setResult({ seedPhrase, wallets, balances: allBalances, explanation: '', summary: '' });
 
         if (hasBalance) {
           stopSearching();
           setIsCheckingAll(true);
           toast({
             title: 'Potential Wallet Found!',
-            description: `An Ethereum address with a balance was found after ${currentAttempts} attempts. Verifying all balances...`,
+            description: `A wallet with a balance was found after ${currentAttempts} attempts. Verifying all balances...`,
           });
           
-          const allBalances = await checkAllBalances({
-            ethereum: wallets.ethereum.address,
-            bitcoin: wallets.bitcoin.address,
-            solana: wallets.solana.address,
-            bsc: wallets.bsc.address,
-            cardano: wallets.cardano.address,
-          });
+          const fullBalances = await checkAllBalances(wallets);
 
-          setResult(prev => prev ? ({ ...prev, balances: allBalances }) : null);
+          setResult(prev => prev ? ({ ...prev, balances: fullBalances }) : null);
           setIsCheckingAll(false);
           setIsLoading(false);
 
@@ -124,13 +143,7 @@ export default function CryptoSleuth() {
           });
 
           setIsGettingInsights(true);
-          const { explanation, summary } = await getInsights({
-            ethereum: wallets.ethereum.address,
-            bitcoin: wallets.bitcoin.address,
-            solana: wallets.solana.address,
-            bsc: wallets.bsc.address,
-            cardano: wallets.cardano.address,
-          }, allBalances);
+          const { explanation, summary } = await getInsights(wallets, fullBalances);
           setResult(prev => prev ? ({ ...prev, explanation, summary }) : null);
           setIsGettingInsights(false);
         }
@@ -174,14 +187,14 @@ export default function CryptoSleuth() {
     }
   };
   
-  const hasAnyBalance = result && Object.values(result.balances).some(bal => parseFloat(bal) > 0);
+  const hasAnyBalance = result && Object.values(result.balances).some(bal => bal !== '...' && parseFloat(bal) > 0);
 
   const walletData: WalletCardInfo[] = result ? [
-    { name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum.address, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && !result, hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
-    { name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin.address, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
-    { name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
-    { name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
-    { name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
+    { name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum.address, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ethBalance === '...', hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
+    { name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin.address, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
+    { name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
+    { name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
+    { name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
   ] : Array(5).fill({ loading: isSearching });
 
 
@@ -190,8 +203,8 @@ export default function CryptoSleuth() {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(runSearch)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              <div className="md:col-span-2 space-y-6">
                 <FormField
                   control={form.control}
                   name="partialSeed"
@@ -205,24 +218,73 @@ export default function CryptoSleuth() {
                     </FormItem>
                   )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="wordCount"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Word Count</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSearching}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select word count" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="12">12 words</SelectItem>
+                            <SelectItem value="24">24 words</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
               </div>
+
               <FormField
                 control={form.control}
-                name="wordCount"
-                render={({ field }) => (
+                name="blockchains"
+                render={() => (
                   <FormItem>
-                    <FormLabel>Word Count</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSearching}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select word count" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="12">12 words</SelectItem>
-                        <SelectItem value="24">24 words</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="mb-4">
+                        <FormLabel>Blockchains to Search</FormLabel>
+                    </div>
+                    <div className="space-y-3">
+                    {blockchains.map((item) => (
+                      <FormField
+                        key={item.id}
+                        control={form.control}
+                        name="blockchains"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={item.id}
+                              className="flex flex-row items-center space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item.id)}
+                                  disabled={isSearching}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, item.id])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== item.id
+                                          )
+                                        )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal flex items-center gap-2">
+                                {item.icon} {item.label}
+                              </FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -230,7 +292,7 @@ export default function CryptoSleuth() {
             </div>
             <div className="flex gap-4">
               {!isSearching && (
-                <Button type="submit" className="w-full md:w-auto">
+                <Button type="submit" className="w-full md:w-auto" disabled={!form.formState.isValid}>
                   <Search className="mr-2 h-4 w-4" />
                   Start Searching
                 </Button>
@@ -247,7 +309,7 @@ export default function CryptoSleuth() {
         
         {(isSearching || result) && <Separator className="my-8" />}
 
-        {isSearching && (
+        {isSearching && !result && (
           <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
             Searching... (Attempt: {attempts})
@@ -256,6 +318,12 @@ export default function CryptoSleuth() {
 
         {result && (
           <div className="space-y-6">
+             {isSearching && (
+                <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Searching... (Attempt: {attempts})
+                </div>
+            )}
             <Card className={cn("transition-colors", hasAnyBalance ? "bg-green-100/50 border-green-500/50" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
