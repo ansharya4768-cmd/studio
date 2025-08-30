@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
+import { cn } from '@/lib/utils';
 
 export interface WalletCardInfo {
   name: string;
@@ -14,9 +15,10 @@ export interface WalletCardInfo {
   balance: string;
   icon: React.ReactNode;
   loading: boolean;
+  hasBalance?: boolean;
 }
 
-export default function WalletCard({ name, symbol, address, balance, icon, loading }: Partial<WalletCardInfo>) {
+export default function WalletCard({ name, symbol, address, balance, icon, loading, hasBalance }: Partial<WalletCardInfo>) {
   const { toast } = useToast();
 
   const handleCopy = () => {
@@ -45,14 +47,14 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className={cn("flex flex-col transition-colors", hasBalance && "bg-green-100/50 border-green-500/50")}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-medium font-headline">{name}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-between">
         <div>
-          <div className="text-2xl font-bold text-primary">
+          <div className={cn("text-2xl font-bold", hasBalance ? "text-green-600" : "text-primary")}>
             {balance} <span className="text-sm text-muted-foreground">{symbol}</span>
           </div>
           <CardDescription className="text-xs break-all mt-2">{address}</CardDescription>
