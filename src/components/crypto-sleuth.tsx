@@ -200,10 +200,11 @@ export default function CryptoSleuth() {
             
             // Set loading states for all cards
             const loadingBalances = { ...allBalances };
-            const loadingUsdValues = { ...allUsdValues };
-            Object.keys(loadingBalances).forEach(key => {
-                loadingBalances[key] = '...';
-                loadingUsdValues[key] = '...';
+            const loadingUsdValues: Record<string, string> = {};
+            
+            blockchains.forEach(chain => {
+                loadingBalances[`${chain.id}Balance`] = '...';
+                loadingUsdValues[`${chain.id}Balance`] = '...';
             });
             setResult(prev => prev ? { ...prev, balances: loadingBalances, usdValues: loadingUsdValues } : null);
 

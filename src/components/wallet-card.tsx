@@ -64,7 +64,7 @@ export default function WalletCard({ name, symbol, address, balance, usdValue, i
             {balance !== '...' && <span className="text-sm text-muted-foreground">{symbol}</span>}
           </div>
           <p className="text-sm font-semibold text-muted-foreground">
-            {usdValue === '...' ? <Loader2 className="h-4 w-4 animate-spin inline-block" /> : `$${usdValue} USDT`}
+            {usdValue === '...' ? <Loader2 className="h-4 w-4 animate-spin inline-block" /> : `$${usdValue || '0.00'} USDT`}
           </p>
           <CardDescription className="text-xs break-all mt-2">{address.address}</CardDescription>
         </div>
