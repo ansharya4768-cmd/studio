@@ -8,12 +8,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
 import { type Blockchain } from '@/app/actions';
+import { type WalletInfo } from '@/lib/crypto-derivation';
 
 export interface WalletCardInfo {
   id: Blockchain;
   name: string;
   symbol: string;
-  address: string;
+  address: WalletInfo;
   balance: string;
   icon: React.ReactNode;
   loading: boolean;
@@ -25,7 +26,7 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
 
   const handleCopy = () => {
     if (address) {
-      navigator.clipboard.writeText(address);
+      navigator.clipboard.writeText(address.address);
       toast({
         title: 'Copied!',
         description: `${name} address copied to clipboard.`,
@@ -60,7 +61,7 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
             {balance === '...' ? <Loader2 className="h-6 w-6 animate-spin" /> : balance}
             {balance !== '...' && <span className="text-sm text-muted-foreground">{symbol}</span>}
           </div>
-          <CardDescription className="text-xs break-all mt-2">{address}</CardDescription>
+          <CardDescription className="text-xs break-all mt-2">{address.address}</CardDescription>
         </div>
         <div className="mt-4">
           <Separator className="mb-4"/>
