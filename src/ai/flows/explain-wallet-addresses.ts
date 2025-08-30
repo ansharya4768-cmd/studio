@@ -17,6 +17,7 @@ const ExplainWalletAddressesInputSchema = z.object({
   solanaAddress: z.string().describe('The derived Solana wallet address.'),
   cardanoAddress: z.string().describe('The derived Cardano wallet address.'),
   bscAddress: z.string().describe('The derived Binance Smart Chain wallet address.'),
+  litecoinAddress: z.string().describe('The derived Litecoin wallet address.'),
 });
 
 export type ExplainWalletAddressesInput = z.infer<typeof ExplainWalletAddressesInputSchema>;
@@ -37,7 +38,7 @@ const prompt = ai.definePrompt({
   output: {schema: ExplainWalletAddressesOutputSchema},
   prompt: `You are an expert in blockchain technology and cryptocurrency wallets.
 
-You will receive derived wallet addresses for Ethereum, Bitcoin, Solana, Binance Smart Chain, and Cardano.
+You will receive derived wallet addresses for Ethereum, Bitcoin, Solana, Binance Smart Chain, Cardano, and Litecoin.
 
 Your task is to explain the purpose and significance of each wallet address. Explain what each blockchain is used for, and the significance of having an address on that chain.
 
@@ -45,7 +46,8 @@ Ethereum Address: {{{ethereumAddress}}}
 Bitcoin Address: {{{bitcoinAddress}}}
 Solana Address: {{{solanaAddress}}}
 Binance Smart Chain Address: {{{bscAddress}}}
-Cardano Address: {{{cardanoAddress}}}`,
+Cardano Address: {{{cardanoAddress}}}
+Litecoin Address: {{{litecoinAddress}}}`,
 });
 
 const explainWalletAddressesFlow = ai.defineFlow(

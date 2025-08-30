@@ -16,6 +16,7 @@ const SummarizeBlockchainInsightsInputSchema = z.object({
   solBalance: z.string().describe('The balance of the Solana wallet.'),
   bscBalance: z.string().describe('The balance of the BSC wallet.'),
   adaBalance: z.string().describe('The balance of the Cardano wallet.'),
+  ltcBalance: z.string().describe('The balance of the Litecoin wallet.'),
 });
 export type SummarizeBlockchainInsightsInput = z.infer<typeof SummarizeBlockchainInsightsInputSchema>;
 
@@ -38,7 +39,8 @@ Ethereum Balance: {{{ethBalance}}}
 Bitcoin Balance: {{{btcBalance}}}
 Solana Balance: {{{solBalance}}}
 BSC Balance: {{{bscBalance}}}
-Cardano Balance: {{{adaBalance}}}`, // Corrected typo here
+Cardano Balance: {{{adaBalance}}}
+Litecoin Balance: {{{ltcBalance}}}`,
 });
 
 const summarizeBlockchainInsightsFlow = ai.defineFlow(

@@ -29,3 +29,9 @@ export const AdaIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="M14.92 3l-1.39 2.43L12 7.86l-1.53-2.43L9.08 3h-5.4l5.85 9.4-3.5 5.92h3.5l1.55-2.66 1.55 2.66h3.5l-3.5-5.92L19.92 3z" />
   </svg>
 );
+
+export const LtcIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.42 13.43l-3.52-1.92-1.6 3.82-1.89-.79.9-2.15-3.03-1.65.79-1.89 3.03 1.65 1.5-3.58-3.03-1.65.79-1.89 3.03 1.65.9-2.15 1.89.79-1.6 3.81 3.52 1.92-.79 1.89z" />
+  </svg>
+);

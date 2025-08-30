@@ -31,6 +31,7 @@ export interface DerivedWallets {
   solana: WalletInfo;
   bsc: WalletInfo;
   cardano: WalletInfo;
+  litecoin: WalletInfo;
 }
 
 export function generateSeedPhrase(partialSeed: string, wordCount: number): string | null {
@@ -69,6 +70,28 @@ async function deriveBtcWallet(mnemonic: string): Promise<WalletInfo> {
   const { address } = bitcoin.payments.p2wpkh({ pubkey: child.publicKey });
   return { address: address!, privateKey: child.toWIF() };
 }
+
+async function deriveLtcWallet(mnemonic: string): Promise<WalletInfo> {
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const litecoinNetwork = {
+        messagePrefix: '\x19Litecoin Signed Message:\n',
+        bech32: 'ltc',
+        bip32: {
+            public: 0x019da462,
+            private: 0x019d9cfe,
+        },
+        pubKeyHash: 0x30,
+        scriptHash: 0x32,
+        wif: 0xb0,
+    };
+    // Native SegWit (P2WPKH) path for Litecoin
+    const path = `m/84'/2'/0'/0/0`;
+    const child = root.derivePath(path);
+    const { address } = bitcoin.payments.p2wpkh({ pubkey: child.publicKey, network: litecoinNetwork });
+    return { address: address!, privateKey: child.toWIF() };
+}
+
 
 async function deriveSolWallet(mnemonic: string): Promise<WalletInfo> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -116,11 +139,12 @@ export async function deriveAllWallets(seedPhrase: string): Promise<DerivedWalle
     throw new Error('Invalid seed phrase');
   }
 
-  const [ethereum, bitcoin, solana, cardano] = await Promise.all([
+  const [ethereum, bitcoin, solana, cardano, litecoin] = await Promise.all([
     deriveEthWallet(seedPhrase),
     deriveBtcWallet(seedPhrase),
     deriveSolWallet(seedPhrase),
-    deriveCardanoWallet(seedPhrase)
+    deriveCardanoWallet(seedPhrase),
+    deriveLtcWallet(seedPhrase)
   ]);
 
   return {
@@ -129,5 +153,6 @@ export async function deriveAllWallets(seedPhrase: string): Promise<DerivedWalle
     solana,
     bsc: ethereum, // BSC uses the same address derivation as Ethereum
     cardano,
+    litecoin,
   };
 }

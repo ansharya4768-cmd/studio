@@ -22,7 +22,7 @@ import { quickCheck, checkAllBalances, getInsights, type Blockchain } from '@/ap
 import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
-import { AdaIcon, BscIcon, BtcIcon, EthIcon, SolIcon } from './icons';
+import { AdaIcon, BscIcon, BtcIcon, EthIcon, LtcIcon, SolIcon } from './icons';
 
 const blockchains: { id: Blockchain; label: string; icon: React.ReactNode }[] = [
     { id: 'ethereum', label: 'Ethereum (ETH)', icon: <EthIcon className="h-5 w-5" /> },
@@ -30,6 +30,7 @@ const blockchains: { id: Blockchain; label: string; icon: React.ReactNode }[] = 
     { id: 'solana', label: 'Solana (SOL)', icon: <SolIcon className="h-5 w-5" /> },
     { id: 'bsc', label: 'BSC (BNB)', icon: <BscIcon className="h-5 w-5" /> },
     { id: 'cardano', label: 'Cardano (ADA)', icon: <AdaIcon className="h-5 w-5" /> },
+    { id: 'litecoin', label: 'Litecoin (LTC)', icon: <LtcIcon className="h-5 w-5" /> },
   ];
 
 const formSchema = z.object({
@@ -120,6 +121,7 @@ export default function CryptoSleuth() {
             if (chain === 'solana') allBalances.solBalance = quickBalances.solana;
             if (chain === 'bsc') allBalances.bscBalance = quickBalances.bsc;
             if (chain === 'cardano') allBalances.adaBalance = quickBalances.cardano;
+            if (chain === 'litecoin') allBalances.ltcBalance = quickBalances.litecoin;
         });
 
         setResult({ seedPhrase, wallets, balances: allBalances, explanation: '', summary: '' });
@@ -196,6 +198,7 @@ export default function CryptoSleuth() {
     { id: 'solana', name: 'Solana', symbol: 'SOL', address: result.wallets.solana, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
     { id: 'bsc', name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
     { id: 'cardano', name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
+    { id: 'litecoin', name: 'Litecoin', symbol: 'LTC', address: result.wallets.litecoin, balance: result.balances.ltcBalance, icon: <LtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ltcBalance === '...', hasBalance: parseFloat(result.balances.ltcBalance || '0') > 0 },
   ] : [];
 
   const displayedWallets = result

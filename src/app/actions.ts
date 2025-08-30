@@ -9,9 +9,10 @@ interface Addresses {
   solana: string;
   bsc: string;
   cardano: string;
+  litecoin: string;
 }
 
-export type Blockchain = "ethereum" | "bitcoin" | "solana" | "bsc" | "cardano";
+export type Blockchain = "ethereum" | "bitcoin" | "solana" | "bsc" | "cardano" | "litecoin";
 
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "YOUR_ETHERSCAN_API_KEY";
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "YOUR_BSCSCAN_API_KEY";
@@ -44,6 +45,19 @@ async function checkBtcBalance(address: string): Promise<string> {
   } catch (e) {
     return "0.0000";
   }
+}
+
+async function checkLtcBalance(address: string): Promise<string> {
+    try {
+      const url = `https://api.blockcypher.com/v1/ltc/main/addrs/${address}/balance?token=${BLOCKCYPHER_API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) return "0.0000";
+      const data = await response.json();
+      const balance = data.final_balance / 1e8;
+      return balance.toFixed(4);
+    } catch (e) {
+      return "0.0000";
+    }
 }
 
 async function checkSolBalance(address: string): Promise<string> {
@@ -104,6 +118,7 @@ const balanceCheckers: Record<Blockchain, (address: string) => Promise<string>> 
   solana: checkSolBalance,
   bsc: checkBscBalance,
   cardano: checkAdaBalance,
+  litecoin: checkLtcBalance,
 };
 
 export async function quickCheck(addresses: Addresses, blockchains: Blockchain[]): Promise<Record<string, string>> {
@@ -117,15 +132,16 @@ export async function quickCheck(addresses: Addresses, blockchains: Blockchain[]
 
 
 export async function checkAllBalances(addresses: Addresses): Promise<Record<string, string>> {
-  const [ethBalance, btcBalance, solBalance, bscBalance, adaBalance] = await Promise.all([
+  const [ethBalance, btcBalance, solBalance, bscBalance, adaBalance, ltcBalance] = await Promise.all([
     checkEthBalance(addresses.ethereum),
     checkBtcBalance(addresses.bitcoin),
     checkSolBalance(addresses.solana),
     checkBscBalance(addresses.bsc),
     checkAdaBalance(addresses.cardano),
+    checkLtcBalance(addresses.litecoin),
   ]);
 
-  return { ethBalance, btcBalance, solBalance, bscBalance, adaBalance };
+  return { ethBalance, btcBalance, solBalance, bscBalance, adaBalance, ltcBalance };
 }
 
 export async function getInsights(addresses: Addresses, balances: Record<string, string>) {
@@ -136,6 +152,7 @@ export async function getInsights(addresses: Addresses, balances: Record<string,
       solanaAddress: addresses.solana,
       cardanoAddress: addresses.cardano,
       bscAddress: addresses.bsc,
+      litecoinAddress: addresses.litecoin,
     }),
     summarizeBlockchainInsights({
       ethBalance: balances.ethBalance || '0',
@@ -143,6 +160,7 @@ export async function getInsights(addresses: Addresses, balances: Record<string,
       solBalance: balances.solBalance || '0',
       bscBalance: balances.bscBalance || '0',
       adaBalance: balances.adaBalance || '0',
+      ltcBalance: balances.ltcBalance || '0',
     })
   ]);
 
