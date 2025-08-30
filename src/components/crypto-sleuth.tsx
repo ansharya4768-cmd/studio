@@ -334,7 +334,7 @@ export default function CryptoSleuth() {
             <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-100/50 border-green-500" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
-                  {isSearching ? 'Last Checked Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
+                  {isSearching ? 'Currently Checking Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
