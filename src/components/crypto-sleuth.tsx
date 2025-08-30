@@ -89,6 +89,12 @@ export default function CryptoSleuth() {
     }
   }, [lastReset, setLastReset, setTotalAttempts]);
 
+  useEffect(() => {
+    // Sync local storage on initial load
+    setDisplayedTotalAttempts(totalAttempts);
+    totalAttemptsRef.current = totalAttempts;
+  }, [totalAttempts]);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -365,44 +371,47 @@ export default function CryptoSleuth() {
               />
             </div>
             <div className="flex flex-col gap-4">
-              <div className="flex gap-4 items-center">
-                {!isSearching && (
-                  <Button type="submit" className="w-full md:w-auto shadow-lg bg-gradient-to-br from-primary to-accent/80 hover:from-primary/90 hover:to-accent/70 text-white" disabled={!form.formState.isValid} size="lg">
-                    <Search className="mr-2 h-4 w-4" />
-                    Start Searching
-                  </Button>
-                )}
-                {isSearching && (
+              <div className="flex flex-wrap gap-4 items-center">
                   <div className="flex gap-4">
-                      {!isPaused ? (
-                          <Button variant="secondary" type="button" className="w-full md:w-auto shadow-lg" onClick={pauseSearching} size="lg">
-                              <Pause className="mr-2 h-4 w-4" />
-                              Pause
-                          </Button>
-                      ) : (
-                          <Button variant="secondary" type="button" className="w-full md:w-auto shadow-lg" onClick={continueSearching} size="lg">
-                              <Play className="mr-2 h-4 w-4" />
-                              Continue
-                          </Button>
-                      )}
-                      <Button variant="destructive" type="button" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
-                          <X className="mr-2 h-4 w-4" />
-                          Stop
+                    {!isSearching && (
+                      <Button type="submit" className="w-full md:w-auto shadow-lg bg-gradient-to-br from-primary to-accent/80 hover:from-primary/90 hover:to-accent/70 text-white" disabled={!form.formState.isValid} size="lg">
+                        <Search className="mr-2 h-4 w-4" />
+                        Start Searching
                       </Button>
-                  </div>
-                )}
-              </div>
-              {isSearching && (
-                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold text-center">
-                    <div className="flex items-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Wallets Searched This Session: {new Intl.NumberFormat().format(sessionAttempts)}</span>
-                    </div>
-                    <div className="text-sm">
+                    )}
+                    {isSearching && (
+                      <div className="flex gap-4">
+                          {!isPaused ? (
+                              <Button variant="secondary" type="button" className="w-full md:w-auto shadow-lg" onClick={pauseSearching} size="lg">
+                                  <Pause className="mr-2 h-4 w-4" />
+                                  Pause
+                              </Button>
+                          ) : (
+                              <Button variant="secondary" type="button" className="w-full md:w-auto shadow-lg" onClick={continueSearching} size="lg">
+                                  <Play className="mr-2 h-4 w-4" />
+                                  Continue
+                              </Button>
+                          )}
+                          <Button variant="destructive" type="button" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
+                              <X className="mr-2 h-4 w-4" />
+                              Stop
+                          </Button>
+                      </div>
+                    )}
+                </div>
+
+                <div className="flex flex-col items-start justify-center gap-1 text-muted-foreground font-semibold">
+                    {isSearching && (
+                        <div className="flex items-center gap-2 text-sm">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span>Wallets Searched This Session: {new Intl.NumberFormat().format(sessionAttempts)}</span>
+                        </div>
+                    )}
+                    <div className="text-xs font-medium">
                         Total Wallets Checked Today: {new Intl.NumberFormat().format(displayedTotalAttempts)}
                     </div>
                 </div>
-              )}
+              </div>
             </div>
           </form>
         </Form>
@@ -456,3 +465,5 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
+
+    
