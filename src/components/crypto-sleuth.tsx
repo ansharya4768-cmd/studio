@@ -5,7 +5,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Pause, Play, Save, Search, Sparkles, X } from 'lucide-react';
+import { Loader2, Pause, Play, Save, Search, Sparkles, X, Copy } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -285,6 +285,16 @@ export default function CryptoSleuth() {
     ? allWalletData.filter(wallet => hasAnyBalance ? true : selectedChains.includes(wallet.id as Blockchain))
     : (isSearching ? Array(selectedChains.length).fill({ loading: true }) : []);
 
+  const handleCopySeed = () => {
+    if (result?.seedPhrase) {
+      navigator.clipboard.writeText(result.seedPhrase);
+      toast({
+        title: 'Copied!',
+        description: 'Seed phrase copied to clipboard.',
+      });
+    }
+  };
+
   return (
     <Card className="w-full shadow-2xl bg-white/30 backdrop-blur-xl border border-primary/20">
       <CardContent className="p-6">
@@ -436,7 +446,12 @@ export default function CryptoSleuth() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-mono text-center text-lg p-4 bg-background/50 rounded-md">{result.seedPhrase}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-center text-lg p-4 bg-background/50 rounded-md flex-grow">{result.seedPhrase}</p>
+                  <Button variant="ghost" size="icon" onClick={handleCopySeed}>
+                    <Copy className="h-5 w-5"/>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -474,5 +489,3 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
-
-    
