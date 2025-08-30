@@ -93,8 +93,7 @@ async function checkAdaBalance(address: string): Promise<string> {
   }
 }
 
-
-export async function checkBalancesAndGetInsights(addresses: Addresses) {
+export async function checkBalances(addresses: Addresses) {
   const [ethBalance, btcBalance, solBalance, bscBalance, adaBalance] = await Promise.all([
     checkEthBalance(addresses.ethereum),
     checkBtcBalance(addresses.bitcoin),
@@ -103,8 +102,10 @@ export async function checkBalancesAndGetInsights(addresses: Addresses) {
     checkAdaBalance(addresses.cardano),
   ]);
 
-  const balances = { ethBalance, btcBalance, solBalance, bscBalance, adaBalance };
+  return { ethBalance, btcBalance, solBalance, bscBalance, adaBalance };
+}
 
+export async function getInsights(addresses: Addresses, balances: Record<string, string>) {
   const [explanationResult, summaryResult] = await Promise.all([
     explainWalletAddresses({
       ethereumAddress: addresses.ethereum,
@@ -114,12 +115,15 @@ export async function checkBalancesAndGetInsights(addresses: Addresses) {
       bscAddress: addresses.bsc,
     }),
     summarizeBlockchainInsights({
-      ethBalance, btcBalance, solBalance, bscBalance, adaBalance
+      ethBalance: balances.ethBalance,
+      btcBalance: balances.btcBalance,
+      solBalance: balances.solBalance,
+      bscBalance: balances.bscBalance,
+      adaBalance: balances.adaBalance,
     })
   ]);
 
   return {
-    balances,
     explanation: explanationResult.explanation,
     summary: summaryResult.summary,
   };

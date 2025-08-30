@@ -16,7 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-import { checkBalancesAndGetInsights } from '@/app/actions';
+import { checkBalances, getInsights } from '@/app/actions';
 import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
@@ -41,6 +41,7 @@ export default function CryptoSleuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ResultState>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isGettingInsights, setIsGettingInsights] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const { toast } = useToast();
   
@@ -57,7 +58,6 @@ export default function CryptoSleuth() {
   const stopSearching = useCallback(() => {
     searchRef.current = false;
     setIsSearching(false);
-    setIsLoading(false);
   }, []);
 
   const runSearch = useCallback(async (data: FormData) => {
@@ -84,7 +84,7 @@ export default function CryptoSleuth() {
         }
 
         const wallets = await deriveAllWallets(seedPhrase);
-        const { balances, explanation, summary } = await checkBalancesAndGetInsights({
+        const balances = await checkBalances({
           ethereum: wallets.ethereum.address,
           bitcoin: wallets.bitcoin.address,
           solana: wallets.solana.address,
@@ -93,16 +93,27 @@ export default function CryptoSleuth() {
         });
         
         const hasBalance = Object.values(balances).some(bal => parseFloat(bal) > 0);
-
+        
         // Always update the result to show the latest attempt
-        setResult({ seedPhrase, wallets, balances, explanation, summary });
+        setResult({ seedPhrase, wallets, balances, explanation: '', summary: '' });
 
         if (hasBalance) {
           toast({
             title: 'Wallet Found!',
-            description: `A wallet with a balance was found after ${currentAttempts} attempts.`,
+            description: `A wallet with a balance was found after ${currentAttempts} attempts. Fetching AI insights...`,
           });
           stopSearching();
+          setIsLoading(false);
+          setIsGettingInsights(true);
+          const { explanation, summary } = await getInsights({
+            ethereum: wallets.ethereum.address,
+            bitcoin: wallets.bitcoin.address,
+            solana: wallets.solana.address,
+            bsc: wallets.bsc.address,
+            cardano: wallets.cardano.address,
+          }, balances);
+          setResult(prev => prev ? ({ ...prev, explanation, summary }) : null);
+          setIsGettingInsights(false);
         }
       } catch (error) {
         console.error(error);
@@ -116,6 +127,7 @@ export default function CryptoSleuth() {
         return;
       }
     }
+    setIsLoading(false);
   }, [toast, stopSearching]);
 
   useEffect(() => {
@@ -151,7 +163,7 @@ export default function CryptoSleuth() {
     { name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isLoading && !result },
     { name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isLoading && !result },
     { name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isLoading && !result },
-  ] : Array(5).fill({ loading: true });
+  ] : Array(5).fill({ loading: isLoading });
 
 
   return (
@@ -198,10 +210,12 @@ export default function CryptoSleuth() {
               />
             </div>
             <div className="flex gap-4">
-              <Button type="submit" className="w-full md:w-auto" disabled={isSearching}>
-                <Search className="mr-2 h-4 w-4" />
-                Start Searching
-              </Button>
+              {!isSearching && (
+                <Button type="submit" className="w-full md:w-auto">
+                  <Search className="mr-2 h-4 w-4" />
+                  Start Searching
+                </Button>
+              )}
               {isSearching && (
                 <Button variant="destructive" className="w-full md:w-auto" onClick={stopSearching}>
                   <X className="mr-2 h-4 w-4" />
@@ -212,7 +226,7 @@ export default function CryptoSleuth() {
           </form>
         </Form>
         
-        {(isLoading || result) && <Separator className="my-8" />}
+        {(isSearching || result) && <Separator className="my-8" />}
 
         {isSearching && (
           <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
@@ -221,20 +235,12 @@ export default function CryptoSleuth() {
           </div>
         )}
 
-        {isLoading && !isSearching && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {walletData.map((wallet, index) => (
-              <WalletCard key={index} {...wallet} />
-            ))}
-          </div>
-        )}
-
         {result && (
           <div className="space-y-6">
             <Card className={cn("transition-colors", hasBalance ? "bg-green-100/50 border-green-500/50" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
-                  {isSearching ? 'Last Checked Seed Phrase' : 'Generated Seed Phrase'}
+                  {isSearching ? 'Last Checked Seed Phrase' : (hasBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -256,20 +262,24 @@ export default function CryptoSleuth() {
               </div>
             )}
             
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="explanation">
-                <AccordionTrigger className='font-headline text-lg'>AI Wallet Explanation</AccordionTrigger>
-                <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
-                  {result.explanation}
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="summary">
-                <AccordionTrigger className='font-headline text-lg'>AI Investment Insights</AccordionTrigger>
-                <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
-                  {result.summary}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            {(result.explanation || result.summary || isGettingInsights) && (
+              <Accordion type="single" collapsible className="w-full" defaultValue="explanation">
+                <AccordionItem value="explanation">
+                  <AccordionTrigger className='font-headline text-lg'>AI Wallet Explanation</AccordionTrigger>
+                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
+                    {isGettingInsights && !result.explanation && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Generating...</div>}
+                    {result.explanation}
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="summary">
+                  <AccordionTrigger className='font-headline text-lg'>AI Investment Insights</AccordionTrigger>
+                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
+                    {isGettingInsights && !result.summary && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Generating...</div>}
+                    {result.summary}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
           </div>
         )}
       </CardContent>
