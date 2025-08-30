@@ -50,7 +50,7 @@ export default function LoginPage() {
               <Label htmlFor="key">Key</Label>
               <Input
                 id="key"
-                type="text"
+                type="password"
                 placeholder="Enter your key"
                 required
                 className="bg-white/50"
