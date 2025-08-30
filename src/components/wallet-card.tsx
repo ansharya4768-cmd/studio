@@ -7,8 +7,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
+import { type Blockchain } from '@/app/actions';
 
 export interface WalletCardInfo {
+  id: Blockchain;
   name: string;
   symbol: string;
   address: string;
@@ -31,7 +33,7 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
     }
   };
 
-  if (!address) {
+  if (loading || !address) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -55,8 +57,8 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
       <CardContent className="flex-grow flex flex-col justify-between">
         <div>
           <div className={cn("text-2xl font-bold flex items-center gap-2", hasBalance ? "text-green-600" : "text-primary")}>
-            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : balance}
-            {!loading && <span className="text-sm text-muted-foreground">{symbol}</span>}
+            {balance === '...' ? <Loader2 className="h-6 w-6 animate-spin" /> : balance}
+            {balance !== '...' && <span className="text-sm text-muted-foreground">{symbol}</span>}
           </div>
           <CardDescription className="text-xs break-all mt-2">{address}</CardDescription>
         </div>

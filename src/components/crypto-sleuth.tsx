@@ -69,6 +69,8 @@ export default function CryptoSleuth() {
     },
   });
 
+  const selectedChains = form.watch('blockchains') as Blockchain[];
+
   const stopSearching = useCallback(() => {
     searchRef.current = false;
     setIsSearching(false);
@@ -81,7 +83,7 @@ export default function CryptoSleuth() {
     setResult(null);
     let currentAttempts = 0;
 
-    const selectedChains = data.blockchains as Blockchain[];
+    const searchBlockchains = data.blockchains as Blockchain[];
 
     while (searchRef.current) {
       currentAttempts++;
@@ -100,20 +102,18 @@ export default function CryptoSleuth() {
         }
 
         const wallets = await deriveAllWallets(seedPhrase);
-        const quickBalances = await quickCheck(wallets, selectedChains);
+        const quickBalances = await quickCheck(wallets, searchBlockchains);
         
         const hasBalance = Object.values(quickBalances).some(balance => parseFloat(balance) > 0);
         
-        const allBalances = { 
-          ethBalance: '...', 
-          btcBalance: '...', 
-          solBalance: '...', 
-          bscBalance: '...', 
-          adaBalance: '...' 
-        };
+        const allBalances: Record<string, string> = {};
+        blockchains.forEach(chain => {
+            const balanceKey = `${chain.id}Balance` as keyof ResultState['balances'];
+            allBalances[balanceKey] = '...';
+        });
 
-        selectedChains.forEach(chain => {
-            const balanceKey = `${chain.toLowerCase()}Balance` as keyof typeof allBalances;
+        searchBlockchains.forEach(chain => {
+            const balanceKey = `${chain.id}Balance` as keyof typeof allBalances;
             if (chain === 'ethereum') allBalances.ethBalance = quickBalances.ethereum;
             if (chain === 'bitcoin') allBalances.btcBalance = quickBalances.bitcoin;
             if (chain === 'solana') allBalances.solBalance = quickBalances.solana;
@@ -189,14 +189,17 @@ export default function CryptoSleuth() {
   
   const hasAnyBalance = result && Object.values(result.balances).some(bal => bal !== '...' && parseFloat(bal) > 0);
 
-  const walletData: WalletCardInfo[] = result ? [
-    { name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum.address, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ethBalance === '...', hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
-    { name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin.address, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
-    { name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
-    { name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
-    { name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
-  ] : Array(5).fill({ loading: isSearching });
+  const allWalletData: WalletCardInfo[] = result ? [
+    { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum.address, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ethBalance === '...', hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
+    { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin.address, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
+    { id: 'solana', name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
+    { id: 'bsc', name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
+    { id: 'cardano', name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
+  ] : [];
 
+  const displayedWallets = result
+    ? allWalletData.filter(wallet => selectedChains.includes(wallet.id as Blockchain))
+    : (isSearching ? Array(selectedChains.length).fill({ loading: true }) : []);
 
   return (
     <Card className="w-full shadow-lg">
@@ -336,7 +339,7 @@ export default function CryptoSleuth() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {walletData.map((wallet, index) => (
+              {displayedWallets.map((wallet, index) => (
                 <WalletCard key={index} {...wallet} />
               ))}
             </div>
