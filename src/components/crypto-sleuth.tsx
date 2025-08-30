@@ -316,7 +316,7 @@ export default function CryptoSleuth() {
         {isSearching && !result && (
           <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Searching... (Attempt: {new Intl.NumberFormat().format(attempts)})
+            Wallet searched= {new Intl.NumberFormat().format(attempts)}
           </div>
         )}
 
@@ -325,7 +325,7 @@ export default function CryptoSleuth() {
              {isSearching && (
                 <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Searching... (Attempt: {new Intl.NumberFormat().format(attempts)})
+                    Wallet searched= {new Intl.NumberFormat().format(attempts)}
                 </div>
             )}
             <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-100/50 border-green-500" : "bg-primary/5 border-primary/20")}>
