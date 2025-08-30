@@ -23,6 +23,7 @@ async function checkEthBalance(address: string): Promise<string> {
     const response = await fetch(url);
     if (!response.ok) return "0.0000";
     const data = await response.json();
+    if (data.status === "0") return "0.0000";
     const balance = parseInt(data.result, 10) / 1e18;
     return balance.toFixed(4);
   } catch (e) {
@@ -57,6 +58,7 @@ async function checkSolBalance(address: string): Promise<string> {
     });
     if (!response.ok) return "0.0000";
     const data = await response.json();
+    if (!data.result) return "0.0000";
     const balance = data.result.value / 1e9;
     return balance.toFixed(4);
   } catch (e) {
@@ -70,6 +72,7 @@ async function checkBscBalance(address: string): Promise<string> {
     const response = await fetch(url);
     if (!response.ok) return "0.0000";
     const data = await response.json();
+    if (data.status === "0") return "0.0000";
     const balance = parseInt(data.result, 10) / 1e18;
     return balance.toFixed(4);
   } catch (e) {
@@ -93,7 +96,12 @@ async function checkAdaBalance(address: string): Promise<string> {
   }
 }
 
-export async function checkBalances(addresses: Addresses) {
+export async function quickCheck(addresses: Addresses) {
+  const ethBalance = await checkEthBalance(addresses.ethereum);
+  return { ethBalance };
+}
+
+export async function checkAllBalances(addresses: Addresses) {
   const [ethBalance, btcBalance, solBalance, bscBalance, adaBalance] = await Promise.all([
     checkEthBalance(addresses.ethereum),
     checkBtcBalance(addresses.bitcoin),

@@ -16,7 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-import { checkBalances, getInsights } from '@/app/actions';
+import { quickCheck, checkAllBalances, getInsights } from '@/app/actions';
 import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
@@ -42,6 +42,7 @@ export default function CryptoSleuth() {
   const [result, setResult] = useState<ResultState>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isGettingInsights, setIsGettingInsights] = useState(false);
+  const [isCheckingAll, setIsCheckingAll] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const { toast } = useToast();
   
@@ -84,7 +85,7 @@ export default function CryptoSleuth() {
         }
 
         const wallets = await deriveAllWallets(seedPhrase);
-        const balances = await checkBalances({
+        const { ethBalance } = await quickCheck({
           ethereum: wallets.ethereum.address,
           bitcoin: wallets.bitcoin.address,
           solana: wallets.solana.address,
@@ -92,18 +93,36 @@ export default function CryptoSleuth() {
           cardano: wallets.cardano.address,
         });
         
-        const hasBalance = Object.values(balances).some(bal => parseFloat(bal) > 0);
+        const hasBalance = parseFloat(ethBalance) > 0;
         
-        // Always update the result to show the latest attempt
-        setResult({ seedPhrase, wallets, balances, explanation: '', summary: '' });
+        const partialBalances = { ethBalance, btcBalance: '...', solBalance: '...', bscBalance: '...', adaBalance: '...' };
+        setResult({ seedPhrase, wallets, balances: partialBalances, explanation: '', summary: '' });
 
         if (hasBalance) {
-          toast({
-            title: 'Wallet Found!',
-            description: `A wallet with a balance was found after ${currentAttempts} attempts. Fetching AI insights...`,
-          });
           stopSearching();
+          setIsCheckingAll(true);
+          toast({
+            title: 'Potential Wallet Found!',
+            description: `An Ethereum address with a balance was found after ${currentAttempts} attempts. Verifying all balances...`,
+          });
+          
+          const allBalances = await checkAllBalances({
+            ethereum: wallets.ethereum.address,
+            bitcoin: wallets.bitcoin.address,
+            solana: wallets.solana.address,
+            bsc: wallets.bsc.address,
+            cardano: wallets.cardano.address,
+          });
+
+          setResult(prev => prev ? ({ ...prev, balances: allBalances }) : null);
+          setIsCheckingAll(false);
           setIsLoading(false);
+
+          toast({
+            title: 'Wallet Confirmed!',
+            description: 'Full balances confirmed. Now fetching AI insights...',
+          });
+
           setIsGettingInsights(true);
           const { explanation, summary } = await getInsights({
             ethereum: wallets.ethereum.address,
@@ -111,7 +130,7 @@ export default function CryptoSleuth() {
             solana: wallets.solana.address,
             bsc: wallets.bsc.address,
             cardano: wallets.cardano.address,
-          }, balances);
+          }, allBalances);
           setResult(prev => prev ? ({ ...prev, explanation, summary }) : null);
           setIsGettingInsights(false);
         }
@@ -155,15 +174,15 @@ export default function CryptoSleuth() {
     }
   };
   
-  const hasBalance = result && Object.values(result.balances).some(bal => parseFloat(bal) > 0);
+  const hasAnyBalance = result && Object.values(result.balances).some(bal => parseFloat(bal) > 0);
 
   const walletData: WalletCardInfo[] = result ? [
-    { name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum.address, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: isLoading && !result },
-    { name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin.address, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: isLoading && !result },
-    { name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isLoading && !result },
-    { name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isLoading && !result },
-    { name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isLoading && !result },
-  ] : Array(5).fill({ loading: isLoading });
+    { name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum.address, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && !result, hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
+    { name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin.address, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
+    { name: 'Solana', symbol: 'SOL', address: result.wallets.solana.address, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
+    { name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc.address, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
+    { name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano.address, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: (isLoading || isCheckingAll) && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
+  ] : Array(5).fill({ loading: isSearching });
 
 
   return (
@@ -237,10 +256,10 @@ export default function CryptoSleuth() {
 
         {result && (
           <div className="space-y-6">
-            <Card className={cn("transition-colors", hasBalance ? "bg-green-100/50 border-green-500/50" : "bg-primary/5 border-primary/20")}>
+            <Card className={cn("transition-colors", hasAnyBalance ? "bg-green-100/50 border-green-500/50" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
-                  {isSearching ? 'Last Checked Seed Phrase' : (hasBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
+                  {isSearching ? 'Last Checked Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -250,11 +269,11 @@ export default function CryptoSleuth() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {walletData.map((wallet, index) => (
-                <WalletCard key={index} {...wallet} hasBalance={parseFloat(wallet.balance || '0') > 0} />
+                <WalletCard key={index} {...wallet} />
               ))}
             </div>
 
-            {hasBalance && (
+            {hasAnyBalance && (
               <div className="flex justify-center">
                 <Button onClick={handleSave} size="lg">
                   <Save className="mr-2 h-4 w-4" /> Securely Save Found Wallet

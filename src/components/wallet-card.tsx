@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,7 +31,7 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
     }
   };
 
-  if (loading) {
+  if (!address) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -54,8 +54,9 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-between">
         <div>
-          <div className={cn("text-2xl font-bold", hasBalance ? "text-green-600" : "text-primary")}>
-            {balance} <span className="text-sm text-muted-foreground">{symbol}</span>
+          <div className={cn("text-2xl font-bold flex items-center gap-2", hasBalance ? "text-green-600" : "text-primary")}>
+            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : balance}
+            {!loading && <span className="text-sm text-muted-foreground">{symbol}</span>}
           </div>
           <CardDescription className="text-xs break-all mt-2">{address}</CardDescription>
         </div>
