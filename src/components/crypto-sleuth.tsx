@@ -68,7 +68,9 @@ export default function CryptoSleuth() {
   const [totalAttempts, setTotalAttempts] = useLocalStorage(TOTAL_ATTEMPTS_KEY, 0);
   const [lastReset, setLastReset] = useLocalStorage(LAST_RESET_KEY, Date.now());
   const [sessionAttempts, setSessionAttempts] = useState(0);
-  const [displayedTotalAttempts, setDisplayedTotalAttempts] = useState(totalAttempts);
+  const [displayedTotalAttempts, setDisplayedTotalAttempts] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
 
   const { toast } = useToast();
   
@@ -77,6 +79,11 @@ export default function CryptoSleuth() {
   const totalAttemptsRef = useRef<number>(totalAttempts);
   const sessionAttemptsRef = useRef<number>(0);
   const foundRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
 
   useEffect(() => {
     const now = Date.now();
@@ -255,7 +262,7 @@ export default function CryptoSleuth() {
     await Promise.all(workers);
 
     setIsLoading(false);
-  }, [toast, stopSearching, setTotalAttempts, selectedChains]);
+  }, [toast, stopSearching, setTotalAttempts, lastReset, setLastReset]);
 
   useEffect(() => {
     return () => {
@@ -407,9 +414,11 @@ export default function CryptoSleuth() {
                             <span>Wallets Searched This Session: {new Intl.NumberFormat().format(sessionAttempts)}</span>
                         </div>
                     )}
-                    <div className="text-xs font-medium">
-                        Total Wallets Checked Today: {new Intl.NumberFormat().format(displayedTotalAttempts)}
-                    </div>
+                    {isMounted && (
+                      <div className="text-xs font-medium">
+                          Total Wallets Checked Today: {new Intl.NumberFormat().format(displayedTotalAttempts)}
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
