@@ -81,6 +81,8 @@ async function deriveCardanoWallet(mnemonic: string): Promise<WalletInfo> {
     if (!CSL) {
         throw new Error('Cardano Serialization Library could not be loaded on the server.');
     }
+    
+    const harden = (num: number) => 0x80000000 + num;
 
     const entropy = bip39.mnemonicToEntropy(mnemonic);
     const rootKey = CSL.Bip32PrivateKey.from_bip39_entropy(
@@ -89,9 +91,9 @@ async function deriveCardanoWallet(mnemonic: string): Promise<WalletInfo> {
     );
     
     const accountKey = rootKey
-        .derive(CSL.harden(1852)) // Shelley era
-        .derive(CSL.harden(1815)) // Cardano
-        .derive(CSL.harden(0));
+        .derive(harden(1852)) // Shelley era
+        .derive(harden(1815)) // Cardano
+        .derive(harden(0));
     
     const utxoPubKey = accountKey.derive(0).derive(0).to_public();
     const stakeKey = accountKey.derive(2).derive(0).to_public();
