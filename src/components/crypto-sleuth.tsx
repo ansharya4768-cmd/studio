@@ -53,7 +53,7 @@ type ResultState = {
 } | null;
 
 const CONCURRENCY_LEVEL = 5; // Number of parallel checks
-const ATTEMPTS_COUNTER_KEY = 'lost-wallet-finder-attempts';
+const TOTAL_ATTEMPTS_KEY = 'lost-wallet-finder-total-attempts';
 const LAST_RESET_KEY = 'lost-wallet-finder-last-reset';
 
 export default function CryptoSleuth() {
@@ -64,27 +64,29 @@ export default function CryptoSleuth() {
   const [isGettingInsights, setIsGettingInsights] = useState(false);
   const [isCheckingAll, setIsCheckingAll] = useState(false);
   
-  const [persistedAttempts, setPersistedAttempts] = useLocalStorage(ATTEMPTS_COUNTER_KEY, 0);
+  const [totalAttempts, setTotalAttempts] = useLocalStorage(TOTAL_ATTEMPTS_KEY, 0);
   const [lastReset, setLastReset] = useLocalStorage(LAST_RESET_KEY, Date.now());
-  const [attempts, setAttempts] = useState(persistedAttempts);
+  const [sessionAttempts, setSessionAttempts] = useState(0);
+  const [displayedTotalAttempts, setDisplayedTotalAttempts] = useState(totalAttempts);
 
   const { toast } = useToast();
   
   const searchRef = useRef<boolean>(false);
   const pauseRef = useRef<boolean>(false);
-  const attemptsRef = useRef<number>(persistedAttempts);
+  const totalAttemptsRef = useRef<number>(totalAttempts);
+  const sessionAttemptsRef = useRef<number>(0);
   const foundRef = useRef<boolean>(false);
 
   useEffect(() => {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
     if (now - lastReset > oneDay) {
-        setPersistedAttempts(0);
-        setAttempts(0);
-        attemptsRef.current = 0;
+        setTotalAttempts(0);
+        setDisplayedTotalAttempts(0);
+        totalAttemptsRef.current = 0;
         setLastReset(now);
     }
-  }, [lastReset, setLastReset, setPersistedAttempts]);
+  }, [lastReset, setLastReset, setTotalAttempts]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -103,6 +105,8 @@ export default function CryptoSleuth() {
     foundRef.current = false;
     setIsSearching(false);
     setIsPaused(false);
+    sessionAttemptsRef.current = 0;
+    setSessionAttempts(0);
   }, []);
 
   const pauseSearching = () => {
@@ -123,10 +127,9 @@ export default function CryptoSleuth() {
     setIsPaused(false);
     setIsLoading(true);
     setResult(null);
-
-    if (attemptsRef.current === 0) {
-      setAttempts(0); // Reset UI counter if starting fresh
-    }
+    
+    sessionAttemptsRef.current = 0;
+    setSessionAttempts(0);
 
     const searchBlockchains = data.blockchains as Blockchain[];
 
@@ -137,7 +140,8 @@ export default function CryptoSleuth() {
             continue;
         }
 
-        attemptsRef.current++;
+        totalAttemptsRef.current++;
+        sessionAttemptsRef.current++;
         
         try {
           const seedPhrase = generateSeedPhrase(data.partialSeed || '', parseInt(data.wordCount, 10));
@@ -160,7 +164,7 @@ export default function CryptoSleuth() {
               const balanceKey = `${chain.id}Balance` as keyof typeof allBalances;
               if (chain === 'ethereum') allBalances.ethBalance = quickBalances.ethereum;
               if (chain === 'bitcoin') allBalances.btcBalance = quickBalances.bitcoin;
-              if (chain === 'solana') allBalances.solBalance = quickBalances.solana;
+              if (chain === 'solana') allBalances.solana = quickBalances.solana;
               if (chain === 'bsc') allBalances.bscBalance = quickBalances.bsc;
               if (chain === 'cardano') allBalances.adaBalance = quickBalances.cardano;
               if (chain === 'litecoin') allBalances.ltcBalance = quickBalances.litecoin;
@@ -176,7 +180,7 @@ export default function CryptoSleuth() {
             setIsCheckingAll(true);
             toast({
               title: 'Potential Wallet Found!',
-              description: `A wallet with a balance was found after ${attemptsRef.current.toLocaleString()} attempts. Verifying all balances...`,
+              description: `A wallet with a balance was found after ${totalAttemptsRef.current.toLocaleString()} total attempts. Verifying all balances...`,
             });
             
             const fullBalances = await checkAllBalances(wallets);
@@ -220,9 +224,11 @@ export default function CryptoSleuth() {
     
     const updateCounter = () => {
         if (searchRef.current) {
-            const currentAttempts = attemptsRef.current;
-            setAttempts(currentAttempts);
-            setPersistedAttempts(currentAttempts);
+            const currentTotal = totalAttemptsRef.current;
+            const currentSession = sessionAttemptsRef.current;
+            setDisplayedTotalAttempts(currentTotal);
+            setSessionAttempts(currentSession);
+            setTotalAttempts(currentTotal);
             requestAnimationFrame(updateCounter);
         }
     };
@@ -232,7 +238,7 @@ export default function CryptoSleuth() {
     await Promise.all(workers);
 
     setIsLoading(false);
-  }, [toast, stopSearching, searchRef, pauseRef, foundRef, attemptsRef, setPersistedAttempts, selectedChains]);
+  }, [toast, stopSearching, setTotalAttempts, selectedChains]);
 
   useEffect(() => {
     return () => {
@@ -376,9 +382,14 @@ export default function CryptoSleuth() {
                 )}
               </div>
               {isSearching && (
-                <div className="text-center text-lg font-semibold flex items-center justify-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Wallets Searched Today: {new Intl.NumberFormat().format(attempts)}
+                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground font-semibold text-center">
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Wallets Searched This Session: {new Intl.NumberFormat().format(sessionAttempts)}</span>
+                    </div>
+                    <div className="text-sm">
+                        Total Wallets Checked Today: {new Intl.NumberFormat().format(displayedTotalAttempts)}
+                    </div>
                 </div>
               )}
             </div>
