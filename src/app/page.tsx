@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,46 +31,54 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative container mx-auto flex min-h-screen flex-col items-center justify-center p-4 sm:p-8">
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/10 via-background to-accent/10 -z-10"></div>
-      <Card className="mx-auto max-w-sm w-full shadow-2xl bg-white/30 backdrop-blur-xl border border-primary/20">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-8">
+      <Image
+        src="https://picsum.photos/1920/1080"
+        alt="Hacking background"
+        fill
+        className="object-cover -z-20"
+        data-ai-hint="hacker code"
+      />
+      <div className="absolute inset-0 bg-black/60 -z-10" />
+      <Card className="mx-auto max-w-sm w-full shadow-2xl bg-black/30 backdrop-blur-lg border-primary/20 text-white">
         <CardHeader className="space-y-4 text-center">
             <div className="flex justify-center">
-                <div className="flex items-center gap-4 p-4 bg-background/50 backdrop-blur-sm rounded-full border border-primary/10 shadow-lg">
-                    <Wallet className="w-10 h-10 text-primary" />
+                <div className="p-4 bg-primary/20 backdrop-blur-sm rounded-full border border-primary/30 shadow-lg">
+                    <Wallet className="w-12 h-12 text-primary" />
                 </div>
             </div>
-          <CardTitle className="text-3xl font-bold font-headline">Login</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-bold font-headline text-primary">Login</CardTitle>
+          <CardDescription className="text-gray-300">
             Enter your credentials to access your wallet dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="key">Key</Label>
+              <Label htmlFor="key" className="text-gray-300">Key</Label>
               <Input
                 id="key"
                 type="password"
                 placeholder="Enter your key"
                 required
-                className="bg-white/50"
+                className="bg-black/50 border-primary/50 text-white placeholder:text-gray-500 focus:border-primary"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                required  
-                className="bg-white/50"
+              <Label htmlFor="password" className="text-gray-300">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                placeholder="Enter your password"
+                className="bg-black/50 border-primary/50 text-white placeholder:text-gray-500 focus:border-primary"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full shadow-lg bg-gradient-to-br from-primary to-accent/80 hover:from-primary/90 hover:to-accent/70 text-white">
+            <Button type="submit" className="w-full shadow-lg bg-gradient-to-br from-primary to-accent/80 hover:from-primary/90 hover:to-accent/70 text-white font-bold text-lg">
                 Login
             </Button>
           </form>
