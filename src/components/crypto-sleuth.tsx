@@ -329,13 +329,6 @@ export default function CryptoSleuth() {
         
         {(isSearching || result) && <Separator className="my-8" />}
 
-        {isSearching && !foundRef.current && (
-          <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Wallet searched= {new Intl.NumberFormat().format(attempts)}
-          </div>
-        )}
-
         {result && (
           <div className="space-y-8">
              {isSearching && !foundRef.current && (
@@ -397,5 +390,3 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
-
-    
