@@ -307,7 +307,7 @@ export default function CryptoSleuth() {
   };
 
   return (
-    <Card className="w-full shadow-2xl bg-white/30 backdrop-blur-xl border border-primary/20">
+    <Card className="w-full shadow-2xl bg-black/30 backdrop-blur-lg border border-primary/20 text-white">
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(runSearch)(); }} className="space-y-8">
@@ -318,9 +318,9 @@ export default function CryptoSleuth() {
                   name="partialSeed"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-foreground/80">Partial Seed Phrase (Optional)</FormLabel>
+                      <FormLabel className="text-gray-300">Partial Seed Phrase (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., apple banana ..." {...field} disabled={isSearching} className="bg-white/50"/>
+                        <Input placeholder="e.g., apple banana ..." {...field} disabled={isSearching} className="bg-black/50 border-primary/50 text-white placeholder:text-gray-500 focus:border-primary"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -331,10 +331,10 @@ export default function CryptoSleuth() {
                     name="wordCount"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-foreground/80">Word Count</FormLabel>
+                        <FormLabel className="text-gray-300">Word Count</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSearching}>
                         <FormControl>
-                            <SelectTrigger className="bg-white/50">
+                            <SelectTrigger className="bg-black/50 border-primary/50 text-white placeholder:text-gray-500 focus:border-primary">
                             <SelectValue placeholder="Select word count" />
                             </SelectTrigger>
                         </FormControl>
@@ -353,9 +353,9 @@ export default function CryptoSleuth() {
                 control={form.control}
                 name="blockchains"
                 render={() => (
-                  <FormItem className="p-4 border rounded-lg bg-white/20">
+                  <FormItem className="p-4 border rounded-lg bg-black/20 border-primary/50">
                     <div className="mb-4">
-                        <FormLabel className="text-foreground/80">Blockchains to Search</FormLabel>
+                        <FormLabel className="text-gray-300">Blockchains to Search</FormLabel>
                     </div>
                     <div className="space-y-3">
                     {blockchains.map((item) => (
@@ -373,6 +373,7 @@ export default function CryptoSleuth() {
                                 <Checkbox
                                   checked={field.value?.includes(item.id)}
                                   disabled={isSearching}
+                                  className='border-primary-foreground'
                                   onCheckedChange={(checked) => {
                                     return checked
                                       ? field.onChange([...field.value, item.id])
@@ -384,7 +385,7 @@ export default function CryptoSleuth() {
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal flex items-center gap-2 cursor-pointer">
+                              <FormLabel className="font-normal flex items-center gap-2 cursor-pointer text-gray-300">
                                 {item.icon} {item.label}
                               </FormLabel>
                             </FormItem>
@@ -428,7 +429,7 @@ export default function CryptoSleuth() {
                     )}
                 </div>
 
-                <div className="flex flex-col items-start justify-center gap-1 text-muted-foreground font-semibold">
+                <div className="flex flex-col items-start justify-center gap-1 text-gray-400 font-semibold">
                     {isSearching && (
                         <div className="flex items-center gap-2 text-sm">
                             <Loader2 className="h-5 w-5 animate-spin" />
@@ -446,20 +447,20 @@ export default function CryptoSleuth() {
           </form>
         </Form>
         
-        {result && <Separator className="my-8" />}
+        {result && <Separator className="my-8 bg-primary/20" />}
 
         {result && (
           <div className="space-y-8">
-            <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-100/50 border-green-500" : "bg-primary/5 border-primary/20")}>
+            <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-900/50 border-green-500" : "bg-primary/10 border-primary/20")}>
               <CardHeader>
-                <CardTitle className="font-headline text-lg">
+                <CardTitle className="font-headline text-lg text-white">
                   {isSearching && !hasAnyBalance ? 'Currently Checking Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
-                  <p className="font-mono text-center text-lg p-4 bg-background/50 rounded-md flex-grow">{result.seedPhrase}</p>
-                  <Button variant="ghost" size="icon" onClick={handleCopySeed}>
+                  <p className="font-mono text-center text-lg p-4 bg-background/50 rounded-md flex-grow text-gray-200">{result.seedPhrase}</p>
+                  <Button variant="ghost" size="icon" onClick={handleCopySeed} className="text-gray-300 hover:text-white hover:bg-white/10">
                     <Copy className="h-5 w-5"/>
                   </Button>
                 </div>
@@ -473,21 +474,21 @@ export default function CryptoSleuth() {
             </div>
             
             {(result.explanation || result.summary || isGettingInsights) && (
-              <Accordion type="single" collapsible className="w-full bg-white/20 p-4 rounded-lg border" defaultValue="explanation">
+              <Accordion type="single" collapsible className="w-full bg-black/20 p-4 rounded-lg border border-primary/30" defaultValue="explanation">
                 <AccordionItem value="explanation" className="border-b-primary/20">
-                  <AccordionTrigger className='font-headline text-lg hover:no-underline'>
+                  <AccordionTrigger className='font-headline text-lg hover:no-underline text-gray-200'>
                     <Sparkles className="mr-2 h-5 w-5 text-primary"/> AI Wallet Explanation
                   </AccordionTrigger>
-                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap pt-4">
+                  <AccordionContent className="prose prose-sm max-w-none text-gray-400 whitespace-pre-wrap pt-4">
                     {isGettingInsights && !result.explanation && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Generating...</div>}
                     {result.explanation}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="summary" className="border-b-0">
-                  <AccordionTrigger className='font-headline text-lg hover:no-underline'>
+                  <AccordionTrigger className='font-headline text-lg hover:no-underline text-gray-200'>
                     <Sparkles className="mr-2 h-5 w-5 text-primary"/> AI Investment Insights
                   </AccordionTrigger>
-                  <AccordionContent className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap pt-4">
+                  <AccordionContent className="prose prose-sm max-w-none text-gray-400 whitespace-pre-wrap pt-4">
                     {isGettingInsights && !result.summary && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Generating...</div>}
                     {result.summary}
                   </AccordionContent>
@@ -500,5 +501,3 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
-
-    

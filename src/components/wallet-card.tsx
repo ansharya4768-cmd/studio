@@ -38,39 +38,39 @@ export default function WalletCard({ name, symbol, address, balance, usdValue, i
 
   if (loading || !address) {
     return (
-      <Card className="bg-white/30 backdrop-blur-sm">
+      <Card className="bg-black/30 backdrop-blur-sm border-primary/20 text-white">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-           <Skeleton className="h-6 w-24" />
-           <Skeleton className="h-8 w-8 rounded-full" />
+           <Skeleton className="h-6 w-24 bg-white/20" />
+           <Skeleton className="h-8 w-8 rounded-full bg-white/20" />
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-8 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-8 w-3/4 mb-2 bg-white/20" />
+          <Skeleton className="h-4 w-1/2 bg-white/20" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className={cn("flex flex-col transition-colors border-2 shadow-lg bg-white/30 backdrop-blur-xl", hasBalance ? "border-green-500" : "border-transparent")}>
+    <Card className={cn("flex flex-col transition-colors border-2 shadow-lg bg-black/30 backdrop-blur-xl", hasBalance ? "border-green-500" : "border-primary/20")}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-medium font-headline">{name}</CardTitle>
-        <div className="p-1 bg-white/50 rounded-full">{icon}</div>
+        <CardTitle className="text-lg font-medium font-headline text-white">{name}</CardTitle>
+        <div className="p-1 bg-white/20 rounded-full text-white">{icon}</div>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col justify-between">
+      <CardContent className="flex-grow flex flex-col justify-between text-white">
         <div>
-          <div className={cn("text-2xl font-bold flex items-center gap-2", hasBalance ? "text-green-600" : "text-primary")}>
+          <div className={cn("text-2xl font-bold flex items-center gap-2", hasBalance ? "text-green-400" : "text-primary")}>
             {balance === '...' ? <Loader2 className="h-6 w-6 animate-spin" /> : balance}
-            {balance !== '...' && <span className="text-sm text-muted-foreground">{symbol}</span>}
+            {balance !== '...' && <span className="text-sm text-gray-400">{symbol}</span>}
           </div>
-          <p className="text-sm font-semibold text-muted-foreground">
+          <p className="text-sm font-semibold text-gray-400">
             {usdValue === '...' ? <Loader2 className="h-4 w-4 animate-spin inline-block" /> : `$${usdValue || '0.00'} USDT`}
           </p>
-          <CardDescription className="text-xs break-all mt-2">{address.address}</CardDescription>
+          <CardDescription className="text-xs break-all mt-2 text-gray-500">{address.address}</CardDescription>
         </div>
         <div className="mt-4">
-          <Separator className="mb-4 bg-primary/10"/>
-          <Button variant="ghost" size="sm" className="w-full text-primary/80 hover:text-primary hover:bg-primary/10" onClick={handleCopy}>
+          <Separator className="mb-4 bg-primary/20"/>
+          <Button variant="ghost" size="sm" className="w-full text-primary/80 hover:text-white hover:bg-primary/20" onClick={handleCopy}>
             <Copy className="mr-2 h-4 w-4" />
             Copy Address
           </Button>
