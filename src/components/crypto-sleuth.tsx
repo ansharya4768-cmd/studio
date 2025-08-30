@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -65,7 +66,7 @@ export default function CryptoSleuth() {
     defaultValues: {
       partialSeed: '',
       wordCount: '12',
-      blockchains: ['ethereum'],
+      blockchains: ['bitcoin'],
     },
   });
 
