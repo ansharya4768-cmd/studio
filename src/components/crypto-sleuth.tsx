@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { quickCheck, checkAllBalances, getInsights, getBalancesWithUSD, type Blockchain } from '@/app/actions';
-import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
+import { generateSeedPhrase, deriveAllWallets, type DerivedWallets, preloadCrypto } from '@/lib/crypto-derivation';
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
 import { AdaIcon, BscIcon, BtcIcon, EthIcon, LtcIcon, SolIcon } from './icons';
@@ -82,6 +82,7 @@ export default function CryptoSleuth() {
 
   useEffect(() => {
     setIsMounted(true);
+    preloadCrypto();
   }, []);
 
 
@@ -499,3 +500,5 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
+
+    

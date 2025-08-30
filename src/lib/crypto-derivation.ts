@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as bip39 from 'bip39';
@@ -8,14 +9,22 @@ import * as ecc from '@bitcoinerlab/secp256k1';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 
+let CSL: any = null;
+
 // Dynamically import the Cardano serialization library only on the client side
 async function getCSL() {
   if (typeof window !== 'undefined') {
-    const CSL = await import('@emurgo/cardano-serialization-lib-asmjs');
+    if (CSL) return CSL;
+    CSL = await import('@emurgo/cardano-serialization-lib-asmjs');
     return CSL;
   }
   return null;
 }
+
+export async function preloadCrypto() {
+  await getCSL();
+}
+
 
 bitcoin.initEccLib(ecc);
 const bip32 = BIP32Factory(ecc);
@@ -156,3 +165,5 @@ export async function deriveAllWallets(seedPhrase: string): Promise<DerivedWalle
     litecoin,
   };
 }
+
+    
