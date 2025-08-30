@@ -2,7 +2,7 @@
 
 const SALT = new TextEncoder().encode('salt_lost_wallet_finder');
 const PASSWORD = new TextEncoder().encode('static_password_for_demo');
-const STORAGE_KEY = 'crypto_sleuth_saved_wallets';
+const STORAGE_KEY = 'lost_wallet_finder_saved_wallets';
 
 async function getEncryptionKey(): Promise<CryptoKey> {
   const keyMaterial = await window.crypto.subtle.importKey(

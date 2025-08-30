@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'CryptoSeed Sleuth',
+  title: 'Lost Wallet Finder',
   description: 'Find your lost crypto wallet with AI-powered seed phrase recovery.',
 };
 

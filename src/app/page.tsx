@@ -1,4 +1,4 @@
-import CryptoSleuth from '@/components/crypto-sleuth';
+import LostWalletFinder from '@/components/crypto-sleuth';
 import { Wallet } from 'lucide-react';
 
 export default function Home() {
@@ -9,7 +9,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <Wallet className="w-12 h-12 text-primary" />
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-headline font-bold tracking-tighter">
-              CryptoSeed Sleuth
+              Lost Wallet Finder
             </h1>
           </div>
           <p className="max-w-2xl text-muted-foreground md:text-xl">
@@ -17,7 +17,7 @@ export default function Home() {
             Enter a partial seed to get started, or generate a random one.
           </p>
         </div>
-        <CryptoSleuth />
+        <LostWalletFinder />
       </div>
     </main>
   );
