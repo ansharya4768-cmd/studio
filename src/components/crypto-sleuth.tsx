@@ -172,8 +172,8 @@ export default function CryptoSleuth() {
           const allUsdValues: Record<string, string> = {};
           blockchains.forEach(chain => {
               const balanceKey = `${chain.id}Balance` as keyof ResultState['balances'];
-              allBalances[balanceKey] = '...';
-              allUsdValues[balanceKey] = '...';
+              allBalances[balanceKey] = '0.0000';
+              allUsdValues[balanceKey] = '0.00';
           });
 
           searchBlockchains.forEach(chain => {
@@ -198,6 +198,15 @@ export default function CryptoSleuth() {
               description: `A wallet with a balance was found after ${totalAttemptsRef.current.toLocaleString()} total attempts. Verifying all balances...`,
             });
             
+            // Set loading states for all cards
+            const loadingBalances = { ...allBalances };
+            const loadingUsdValues = { ...allUsdValues };
+            Object.keys(loadingBalances).forEach(key => {
+                loadingBalances[key] = '...';
+                loadingUsdValues[key] = '...';
+            });
+            setResult(prev => prev ? { ...prev, balances: loadingBalances, usdValues: loadingUsdValues } : null);
+
             const fullBalances = await checkAllBalances(wallets);
             const balancesWithUsd = await getBalancesWithUSD(fullBalances);
             
@@ -262,7 +271,7 @@ export default function CryptoSleuth() {
     await Promise.all(workers);
 
     setIsLoading(false);
-  }, [toast, stopSearching, setTotalAttempts, lastReset, setLastReset]);
+  }, [toast, stopSearching, setTotalAttempts]);
 
   useEffect(() => {
     return () => {
