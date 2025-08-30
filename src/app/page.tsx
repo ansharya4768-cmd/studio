@@ -25,11 +25,11 @@ export default function LoginPage() {
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="key">Key</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
+                id="key"
+                type="text"
+                placeholder="Enter your key"
                 required
                 className="bg-white/50"
               />
