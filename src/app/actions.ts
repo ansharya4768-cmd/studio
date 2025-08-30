@@ -1,3 +1,4 @@
+
 "use server";
 
 import { explainWalletAddresses } from "@/ai/flows/explain-wallet-addresses";
@@ -19,6 +20,36 @@ const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "YOUR_BSCSCAN_API_KEY";
 const BLOCKCYPHER_API_KEY = process.env.BLOCKCYPHER_API_KEY || "YOUR_BLOCKCYPHER_API_KEY";
 const BLOCKFROST_API_KEY = process.env.BLOCKFROST_API_KEY || "YOUR_BLOCKFROST_API_KEY";
 const SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
+
+const coinGeckoApiMap: Record<Blockchain, string> = {
+  ethereum: 'ethereum',
+  bitcoin: 'bitcoin',
+  solana: 'solana',
+  bsc: 'binancecoin',
+  cardano: 'cardano',
+  litecoin: 'litecoin'
+};
+
+async function getPrices(chains: Blockchain[]): Promise<Record<string, number>> {
+    const coinIds = chains.map(chain => coinGeckoApiMap[chain]).join(',');
+    try {
+        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd`;
+        const response = await fetch(url);
+        if (!response.ok) return {};
+        const data = await response.json();
+        const prices: Record<string, number> = {};
+        for (const chain of chains) {
+            const coinId = coinGeckoApiMap[chain];
+            if (data[coinId]) {
+                prices[chain] = data[coinId].usd;
+            }
+        }
+        return prices;
+    } catch (e) {
+        console.error("Failed to fetch prices", e);
+        return {};
+    }
+}
 
 async function checkEthBalance(address: string): Promise<string> {
   try {
@@ -144,7 +175,24 @@ export async function checkAllBalances(addresses: Addresses): Promise<Record<str
   return { ethBalance, btcBalance, solBalance, bscBalance, adaBalance, ltcBalance };
 }
 
-export async function getInsights(addresses: Addresses, balances: Record<string, string>) {
+export async function getBalancesWithUSD(balances: Record<string, string>): Promise<Record<string, { balance: string, usdValue: string }>> {
+    const chains = Object.keys(balances).map(key => key.replace('Balance', '') as Blockchain);
+    const prices = await getPrices(chains);
+    const result: Record<string, { balance: string, usdValue: string }> = {};
+    for (const chain of chains) {
+        const balanceKey = `${chain}Balance`;
+        const balance = parseFloat(balances[balanceKey]);
+        const price = prices[chain] || 0;
+        const usdValue = (balance * price).toFixed(2);
+        result[balanceKey] = {
+            balance: balances[balanceKey],
+            usdValue
+        };
+    }
+    return result;
+}
+
+export async function getInsights(addresses: Addresses, balances: Record<string, string>, usdValues: Record<string, string>) {
   const [explanationResult, summaryResult] = await Promise.all([
     explainWalletAddresses({
       ethereumAddress: addresses.ethereum,
@@ -155,12 +203,12 @@ export async function getInsights(addresses: Addresses, balances: Record<string,
       litecoinAddress: addresses.litecoin,
     }),
     summarizeBlockchainInsights({
-      ethBalance: balances.ethBalance || '0',
-      btcBalance: balances.btcBalance || '0',
-      solBalance: balances.solBalance || '0',
-      bscBalance: balances.bscBalance || '0',
-      adaBalance: balances.adaBalance || '0',
-      ltcBalance: balances.ltcBalance || '0',
+      ethBalance: `${balances.ethBalance || '0'} (USD: ${usdValues.ethBalance || '0'})`,
+      btcBalance: `${balances.btcBalance || '0'} (USD: ${usdValues.btcBalance || '0'})`,
+      solBalance: `${balances.solBalance || '0'} (USD: ${usdValues.solBalance || '0'})`,
+      bscBalance: `${balances.bscBalance || '0'} (USD: ${usdValues.bscBalance || '0'})`,
+      adaBalance: `${balances.adaBalance || '0'} (USD: ${usdValues.adaBalance || '0'})`,
+      ltcBalance: `${balances.ltcBalance || '0'} (USD: ${usdValues.ltcBalance || '0'})`,
     })
   ]);
 

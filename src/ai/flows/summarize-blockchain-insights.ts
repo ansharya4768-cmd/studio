@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A GenAI-powered blockchain insights summary flow.
@@ -11,12 +12,12 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SummarizeBlockchainInsightsInputSchema = z.object({
-  ethBalance: z.string().describe('The balance of the Ethereum wallet.'),
-  btcBalance: z.string().describe('The balance of the Bitcoin wallet.'),
-  solBalance: z.string().describe('The balance of the Solana wallet.'),
-  bscBalance: z.string().describe('The balance of the BSC wallet.'),
-  adaBalance: z.string().describe('The balance of the Cardano wallet.'),
-  ltcBalance: z.string().describe('The balance of the Litecoin wallet.'),
+  ethBalance: z.string().describe('The balance of the Ethereum wallet, including its USD value.'),
+  btcBalance: z.string().describe('The balance of the Bitcoin wallet, including its USD value.'),
+  solBalance: z.string().describe('The balance of the Solana wallet, including its USD value.'),
+  bscBalance: z.string().describe('The balance of the BSC wallet, including its USD value.'),
+  adaBalance: z.string().describe('The balance of the Cardano wallet, including its USD value.'),
+  ltcBalance: z.string().describe('The balance of the Litecoin wallet, including its USD value.'),
 });
 export type SummarizeBlockchainInsightsInput = z.infer<typeof SummarizeBlockchainInsightsInputSchema>;
 
@@ -33,7 +34,7 @@ const prompt = ai.definePrompt({
   name: 'summarizeBlockchainInsightsPrompt',
   input: {schema: SummarizeBlockchainInsightsInputSchema},
   output: {schema: SummarizeBlockchainInsightsOutputSchema},
-  prompt: `You are an expert in blockchain and cryptocurrency investments. Based on the provided wallet balances, provide a summary of potential investment opportunities and diversification strategies.
+  prompt: `You are an expert in blockchain and cryptocurrency investments. Based on the provided wallet balances (including their USD equivalents), provide a summary of potential investment opportunities and diversification strategies.
 
 Ethereum Balance: {{{ethBalance}}}
 Bitcoin Balance: {{{btcBalance}}}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Copy, Loader2 } from 'lucide-react';
@@ -16,12 +17,13 @@ export interface WalletCardInfo {
   symbol: string;
   address: WalletInfo;
   balance: string;
+  usdValue: string;
   icon: React.ReactNode;
   loading: boolean;
   hasBalance?: boolean;
 }
 
-export default function WalletCard({ name, symbol, address, balance, icon, loading, hasBalance }: Partial<WalletCardInfo>) {
+export default function WalletCard({ name, symbol, address, balance, usdValue, icon, loading, hasBalance }: Partial<WalletCardInfo>) {
   const { toast } = useToast();
 
   const handleCopy = () => {
@@ -61,6 +63,9 @@ export default function WalletCard({ name, symbol, address, balance, icon, loadi
             {balance === '...' ? <Loader2 className="h-6 w-6 animate-spin" /> : balance}
             {balance !== '...' && <span className="text-sm text-muted-foreground">{symbol}</span>}
           </div>
+          <p className="text-sm font-semibold text-muted-foreground">
+            {usdValue === '...' ? <Loader2 className="h-4 w-4 animate-spin inline-block" /> : `$${usdValue} USDT`}
+          </p>
           <CardDescription className="text-xs break-all mt-2">{address.address}</CardDescription>
         </div>
         <div className="mt-4">

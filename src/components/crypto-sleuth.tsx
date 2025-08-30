@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 
-import { quickCheck, checkAllBalances, getInsights, type Blockchain } from '@/app/actions';
+import { quickCheck, checkAllBalances, getInsights, getBalancesWithUSD, type Blockchain } from '@/app/actions';
 import { generateSeedPhrase, deriveAllWallets, type DerivedWallets } from '@/lib/crypto-derivation';
 import { encryptAndSave } from '@/lib/encryption';
 import WalletCard, { type WalletCardInfo } from '@/components/wallet-card';
@@ -48,6 +48,7 @@ type ResultState = {
   seedPhrase: string;
   wallets: DerivedWallets;
   balances: Record<string, string>;
+  usdValues: Record<string, string>;
   explanation: string;
   summary: string;
 } | null;
@@ -155,13 +156,14 @@ export default function CryptoSleuth() {
           const hasBalance = Object.values(quickBalances).some(balance => parseFloat(balance) > 0);
           
           const allBalances: Record<string, string> = {};
+          const allUsdValues: Record<string, string> = {};
           blockchains.forEach(chain => {
               const balanceKey = `${chain.id}Balance` as keyof ResultState['balances'];
               allBalances[balanceKey] = '...';
+              allUsdValues[balanceKey] = '...';
           });
 
           searchBlockchains.forEach(chain => {
-              const balanceKey = `${chain.id}Balance` as keyof typeof allBalances;
               if (chain === 'ethereum') allBalances.ethBalance = quickBalances.ethereum;
               if (chain === 'bitcoin') allBalances.btcBalance = quickBalances.bitcoin;
               if (chain === 'solana') allBalances.solana = quickBalances.solana;
@@ -171,7 +173,7 @@ export default function CryptoSleuth() {
           });
           
           if (!foundRef.current) {
-            setResult({ seedPhrase, wallets, balances: allBalances, explanation: '', summary: '' });
+            setResult({ seedPhrase, wallets, balances: allBalances, usdValues: allUsdValues, explanation: '', summary: '' });
           }
 
           if (hasBalance) {
@@ -184,8 +186,17 @@ export default function CryptoSleuth() {
             });
             
             const fullBalances = await checkAllBalances(wallets);
+            const balancesWithUsd = await getBalancesWithUSD(fullBalances);
+            
+            const finalBalances: Record<string, string> = {};
+            const finalUsdValues: Record<string, string> = {};
 
-            const finalResult = { seedPhrase, wallets, balances: fullBalances, explanation: '', summary: '' };
+            Object.keys(balancesWithUsd).forEach(key => {
+                finalBalances[key] = balancesWithUsd[key].balance;
+                finalUsdValues[key] = balancesWithUsd[key].usdValue;
+            });
+
+            const finalResult = { seedPhrase, wallets, balances: finalBalances, usdValues: finalUsdValues, explanation: '', summary: '' };
             setResult(finalResult);
             setIsCheckingAll(false);
             setIsLoading(false);
@@ -196,7 +207,7 @@ export default function CryptoSleuth() {
             });
 
             setIsGettingInsights(true);
-            const { explanation, summary } = await getInsights(wallets, fullBalances);
+            const { explanation, summary } = await getInsights(wallets, finalBalances, finalUsdValues);
             const finalResultWithInsights = { ...finalResult, explanation, summary };
             setResult(finalResultWithInsights);
             setIsGettingInsights(false);
@@ -249,16 +260,16 @@ export default function CryptoSleuth() {
   const hasAnyBalance = result && Object.values(result.balances).some(bal => bal !== '...' && parseFloat(bal) > 0);
 
   const allWalletData: WalletCardInfo[] = result ? [
-    { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum, balance: result.balances.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ethBalance === '...', hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
-    { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin, balance: result.balances.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
-    { id: 'solana', name: 'Solana', symbol: 'SOL', address: result.wallets.solana, balance: result.balances.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
-    { id: 'bsc', name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc, balance: result.balances.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
-    { id: 'cardano', name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano, balance: result.balances.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
-    { id: 'litecoin', name: 'Litecoin', symbol: 'LTC', address: result.wallets.litecoin, balance: result.balances.ltcBalance, icon: <LtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ltcBalance === '...', hasBalance: parseFloat(result.balances.ltcBalance || '0') > 0 },
+    { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', address: result.wallets.ethereum, balance: result.balances.ethBalance, usdValue: result.usdValues.ethBalance, icon: <EthIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ethBalance === '...', hasBalance: parseFloat(result.balances.ethBalance || '0') > 0 },
+    { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', address: result.wallets.bitcoin, balance: result.balances.btcBalance, usdValue: result.usdValues.btcBalance, icon: <BtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.btcBalance === '...', hasBalance: parseFloat(result.balances.btcBalance || '0') > 0 },
+    { id: 'solana', name: 'Solana', symbol: 'SOL', address: result.wallets.solana, balance: result.balances.solBalance, usdValue: result.usdValues.solBalance, icon: <SolIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.solBalance === '...', hasBalance: parseFloat(result.balances.solBalance || '0') > 0 },
+    { id: 'bsc', name: 'BNB Smart Chain', symbol: 'BNB', address: result.wallets.bsc, balance: result.balances.bscBalance, usdValue: result.usdValues.bscBalance, icon: <BscIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.bscBalance === '...', hasBalance: parseFloat(result.balances.bscBalance || '0') > 0 },
+    { id: 'cardano', name: 'Cardano', symbol: 'ADA', address: result.wallets.cardano, balance: result.balances.adaBalance, usdValue: result.usdValues.adaBalance, icon: <AdaIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.adaBalance === '...', hasBalance: parseFloat(result.balances.adaBalance || '0') > 0 },
+    { id: 'litecoin', name: 'Litecoin', symbol: 'LTC', address: result.wallets.litecoin, balance: result.balances.ltcBalance, usdValue: result.usdValues.ltcBalance, icon: <LtcIcon className="h-8 w-8" />, loading: isCheckingAll && result?.balances.ltcBalance === '...', hasBalance: parseFloat(result.balances.ltcBalance || '0') > 0 },
   ] : [];
 
   const displayedWallets = result
-    ? allWalletData.filter(wallet => selectedChains.includes(wallet.id as Blockchain))
+    ? allWalletData.filter(wallet => hasAnyBalance ? true : selectedChains.includes(wallet.id as Blockchain))
     : (isSearching ? Array(selectedChains.length).fill({ loading: true }) : []);
 
   return (
