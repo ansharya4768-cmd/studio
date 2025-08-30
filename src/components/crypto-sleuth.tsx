@@ -51,6 +51,8 @@ type ResultState = {
   summary: string;
 } | null;
 
+const CONCURRENCY_LEVEL = 5; // Number of parallel checks
+
 export default function CryptoSleuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ResultState>(null);
@@ -61,6 +63,8 @@ export default function CryptoSleuth() {
   const { toast } = useToast();
   
   const searchRef = useRef<boolean>(false);
+  const attemptsRef = useRef<number>(0);
+  const foundRef = useRef<boolean>(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -75,93 +79,102 @@ export default function CryptoSleuth() {
 
   const stopSearching = useCallback(() => {
     searchRef.current = false;
+    foundRef.current = false;
     setIsSearching(false);
   }, []);
 
   const runSearch = useCallback(async (data: FormData) => {
     searchRef.current = true;
+    foundRef.current = false;
     setIsSearching(true);
     setIsLoading(true);
     setResult(null);
-    let currentAttempts = 0;
+    attemptsRef.current = 0;
+    setAttempts(0);
 
     const searchBlockchains = data.blockchains as Blockchain[];
 
-    while (searchRef.current) {
-      currentAttempts++;
-      setAttempts(currentAttempts);
+    const worker = async () => {
+      while (searchRef.current && !foundRef.current) {
+        attemptsRef.current++;
+        
+        try {
+          const seedPhrase = generateSeedPhrase(data.partialSeed || '', parseInt(data.wordCount, 10));
+          if (!seedPhrase) {
+            // This case is unlikely unless there's an issue with wordlist/generation logic
+            continue; 
+          }
 
-      try {
-        const seedPhrase = generateSeedPhrase(data.partialSeed || '', parseInt(data.wordCount, 10));
-        if (!seedPhrase) {
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not generate a valid seed phrase. Please check your partial input.',
+          const wallets = await deriveAllWallets(seedPhrase);
+          const quickBalances = await quickCheck(wallets, searchBlockchains);
+          
+          const hasBalance = Object.values(quickBalances).some(balance => parseFloat(balance) > 0);
+          
+          const allBalances: Record<string, string> = {};
+          blockchains.forEach(chain => {
+              const balanceKey = `${chain.id}Balance` as keyof ResultState['balances'];
+              allBalances[balanceKey] = '...';
           });
-          stopSearching();
-          return;
-        }
 
-        const wallets = await deriveAllWallets(seedPhrase);
-        const quickBalances = await quickCheck(wallets, searchBlockchains);
-        
-        const hasBalance = Object.values(quickBalances).some(balance => parseFloat(balance) > 0);
-        
-        const allBalances: Record<string, string> = {};
-        blockchains.forEach(chain => {
-            const balanceKey = `${chain.id}Balance` as keyof ResultState['balances'];
-            allBalances[balanceKey] = '...';
-        });
-
-        searchBlockchains.forEach(chain => {
-            const balanceKey = `${chain.id}Balance` as keyof typeof allBalances;
-            if (chain === 'ethereum') allBalances.ethBalance = quickBalances.ethereum;
-            if (chain === 'bitcoin') allBalances.btcBalance = quickBalances.bitcoin;
-            if (chain === 'solana') allBalances.solBalance = quickBalances.solana;
-            if (chain === 'bsc') allBalances.bscBalance = quickBalances.bsc;
-            if (chain === 'cardano') allBalances.adaBalance = quickBalances.cardano;
-            if (chain === 'litecoin') allBalances.ltcBalance = quickBalances.litecoin;
-        });
-
-        setResult({ seedPhrase, wallets, balances: allBalances, explanation: '', summary: '' });
-
-        if (hasBalance) {
-          stopSearching();
-          setIsCheckingAll(true);
-          toast({
-            title: 'Potential Wallet Found!',
-            description: `A wallet with a balance was found after ${currentAttempts} attempts. Verifying all balances...`,
+          searchBlockchains.forEach(chain => {
+              const balanceKey = `${chain.id}Balance` as keyof typeof allBalances;
+              if (chain === 'ethereum') allBalances.ethBalance = quickBalances.ethereum;
+              if (chain === 'bitcoin') allBalances.btcBalance = quickBalances.bitcoin;
+              if (chain === 'solana') allBalances.solBalance = quickBalances.solana;
+              if (chain === 'bsc') allBalances.bscBalance = quickBalances.bsc;
+              if (chain === 'cardano') allBalances.adaBalance = quickBalances.cardano;
+              if (chain === 'litecoin') allBalances.ltcBalance = quickBalances.litecoin;
           });
           
-          const fullBalances = await checkAllBalances(wallets);
+          // Only update the main view if we haven't found a wallet yet
+          if (!foundRef.current) {
+            setResult({ seedPhrase, wallets, balances: allBalances, explanation: '', summary: '' });
+          }
 
-          setResult(prev => prev ? ({ ...prev, balances: fullBalances }) : null);
-          setIsCheckingAll(false);
-          setIsLoading(false);
+          if (hasBalance) {
+            foundRef.current = true; // Signal other workers to stop
+            stopSearching();
+            setIsCheckingAll(true);
+            toast({
+              title: 'Potential Wallet Found!',
+              description: `A wallet with a balance was found after ${attemptsRef.current.toLocaleString()} attempts. Verifying all balances...`,
+            });
+            
+            const fullBalances = await checkAllBalances(wallets);
 
-          toast({
-            title: 'Wallet Confirmed!',
-            description: 'Full balances confirmed. Now fetching AI insights...',
-          });
+            setResult(prev => prev ? ({ ...prev, balances: fullBalances }) : null);
+            setIsCheckingAll(false);
+            setIsLoading(false);
 
-          setIsGettingInsights(true);
-          const { explanation, summary } = await getInsights(wallets, fullBalances);
-          setResult(prev => prev ? ({ ...prev, explanation, summary }) : null);
-          setIsGettingInsights(false);
+            toast({
+              title: 'Wallet Confirmed!',
+              description: 'Full balances confirmed. Now fetching AI insights...',
+            });
+
+            setIsGettingInsights(true);
+            const { explanation, summary } = await getInsights(wallets, fullBalances);
+            setResult(prev => prev ? ({ ...prev, explanation, summary }) : null);
+            setIsGettingInsights(false);
+          }
+        } catch (error) {
+          // Log errors but don't stop the worker
+          console.error("Search worker error:", error);
         }
-      } catch (error) {
-        console.error(error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        toast({
-          variant: 'destructive',
-          title: 'Search Failed',
-          description: errorMessage,
-        });
-        stopSearching();
-        return;
       }
-    }
+    };
+    
+    // UI update loop for attempts
+    const updateCounter = () => {
+        if (searchRef.current) {
+            setAttempts(attemptsRef.current);
+            requestAnimationFrame(updateCounter);
+        }
+    };
+    requestAnimationFrame(updateCounter);
+
+    const workers = Array(CONCURRENCY_LEVEL).fill(0).map(worker);
+    await Promise.all(workers);
+
     setIsLoading(false);
   }, [toast, stopSearching]);
 
@@ -209,7 +222,7 @@ export default function CryptoSleuth() {
     <Card className="w-full shadow-2xl bg-white/30 backdrop-blur-xl border border-primary/20">
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(runSearch)} className="space-y-8">
+          <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(runSearch)(); }} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               <div className="md:col-span-2 space-y-6">
                 <FormField
@@ -305,7 +318,7 @@ export default function CryptoSleuth() {
                 </Button>
               )}
               {isSearching && (
-                <Button variant="destructive" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
+                <Button variant="destructive" type="button" className="w-full md:w-auto shadow-lg" onClick={stopSearching} size="lg">
                   <X className="mr-2 h-4 w-4" />
                   Stop Searching
                 </Button>
@@ -316,7 +329,7 @@ export default function CryptoSleuth() {
         
         {(isSearching || result) && <Separator className="my-8" />}
 
-        {isSearching && !result && (
+        {isSearching && !foundRef.current && (
           <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
             Wallet searched= {new Intl.NumberFormat().format(attempts)}
@@ -325,7 +338,7 @@ export default function CryptoSleuth() {
 
         {result && (
           <div className="space-y-8">
-             {isSearching && (
+             {isSearching && !foundRef.current && (
                 <div className="text-center text-lg font-semibold flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     Wallet searched= {new Intl.NumberFormat().format(attempts)}
@@ -334,7 +347,7 @@ export default function CryptoSleuth() {
             <Card className={cn("transition-colors border-2", hasAnyBalance ? "bg-green-100/50 border-green-500" : "bg-primary/5 border-primary/20")}>
               <CardHeader>
                 <CardTitle className="font-headline text-lg">
-                  {isSearching ? 'Currently Checking Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
+                  {isSearching && !hasAnyBalance ? 'Currently Checking Seed Phrase' : (hasAnyBalance ? 'Found Seed Phrase' : 'Generated Seed Phrase')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -384,3 +397,5 @@ export default function CryptoSleuth() {
     </Card>
   );
 }
+
+    
